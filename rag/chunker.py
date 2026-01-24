@@ -135,6 +135,16 @@ def chunk_document(filepath: Path) -> List[Dict]:
     chunk_index = 0
 
     for page_num, page_content in pages:
+        # Skip pages with no recognized text
+        if "*[Brak rozpoznanego tekstu]*" in page_content:
+            continue
+
+        # Skip pages that are too short (less than 50 chars of actual content)
+        # This filters out pages with only headers and image markers
+        text_without_header = page_content.split('\n', 2)[-1] if '\n' in page_content else page_content
+        if len(text_without_header.strip()) < 50:
+            continue
+
         # Split if page is too long
         sections = chunk_long_section(page_content, MAX_CHUNK_SIZE, CHUNK_OVERLAP)
 

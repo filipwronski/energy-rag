@@ -5,6 +5,12 @@ numpy>=1.24.0
 
 # RAG system dependencies
 qdrant-client>=1.7.0
-sentence-transformers>=2.2.2
-transformers>=4.35.0
-torch>=2.0.0
+
+# API and utilities
+requests>=2.31.0
+python-dotenv>=1.0.0
+
+# Optional: Local models (not required for OpenRouter-based system)
+# sentence-transformers>=2.2.2
+# transformers>=4.35.0
+# torch>=2.0.0

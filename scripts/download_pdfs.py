@@ -41,7 +41,7 @@ def sanitize_filename(filename: str) -> str:
     return safe_string
 
 
-def download_pdfs(json_file: str = "input/files.json", output_dir: str = "input"):
+def download_pdfs(json_file: str = "input/files-sp.json", output_dir: str = "input-sp"):
     """
     Pobiera wszystkie pliki PDF z tablicy w pliku JSON.
 
@@ -67,23 +67,21 @@ def download_pdfs(json_file: str = "input/files.json", output_dir: str = "input"
     for idx, item in enumerate(data, 1):
         file_url = item.get('file', '')
         filename = item.get('filename', f'file_{idx}')
+        filedesc = item.get('filedesc', '')
 
         if not file_url:
             print(f"[{idx}/{total}] Pominięto - brak URL")
             continue
 
-        # Wyodrębnij nazwę pliku z URL
-        parsed_url = urllib.parse.urlparse(file_url)
-        url_filename = os.path.basename(urllib.parse.unquote(parsed_url.path))
-
-        # Użyj nazwy z URL lub z pola filename jako fallback
-        if url_filename.endswith('.pdf'):
-            # Sanityzuj nazwę z URL
-            local_filename = sanitize_filename(url_filename)
+        # Twórz nazwę pliku z filename i filedesc
+        if filedesc:
+            combined_name = f"{filename} - {filedesc}"
         else:
-            # Sanityzuj nazwę pliku z JSON
-            safe_filename = sanitize_filename(filename)
-            local_filename = f"{safe_filename}.pdf"
+            combined_name = filename
+
+        # Sanityzuj nazwę pliku
+        safe_filename = sanitize_filename(combined_name)
+        local_filename = f"{safe_filename}.pdf"
 
         local_path = os.path.join(output_dir, local_filename)
 
