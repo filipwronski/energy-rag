@@ -32,6 +32,32 @@ qdrant_storage/
 .cache/
 models/
 
+# Database files (SQLite cache)
+*.db
+*.sqlite
+*.sqlite3
+**/*.db
+embedding_cache.db
+scripts/embedding_cache.db
+
+# Input PDF files - can be re-downloaded
+input/
+input-sp/
+
+# Generated output files - can be regenerated from PDFs
+output/
+output-sp/
+
+# Additional cache and temporary files
+*.log
+*.pickle
+*.pkl
+*.cache
+.cache-*
+
+# Temporary JSON data files (if applicable)
+input/files.json
+
 # IDE
 .vscode/
 .idea/
@@ -43,4 +69,10 @@ models/
 .DS_Store
 Thumbs.db
 
+# Local configuration
 .env
+.env.*
+!.env.example
+
+# Claude Code local settings
+.claude/settings.local.json

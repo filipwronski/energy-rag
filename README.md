@@ -18,7 +18,8 @@ Zaawansowany system RAG (Retrieval Augmented Generation) do semantycznego wyszuk
 
 ### Q&A System 🆕
 - ✅ **Odpowiedzi w języku naturalnym** - DeepSeek V3.2 generuje odpowiedzi na podstawie RAG
-- ✅ **20 dokumentów kontekstowych** - więcej informacji dla dokładniejszych odpowiedzi
+- ✅ **Inteligentne filtrowanie** - tylko dokumenty wysokiej jakości (RRF score > 0.04)
+- ✅ **Do 20 dokumentów kontekstowych** - adaptacyjna liczba wyników (zwykle 5-15)
 - ✅ **Cytowanie źródeł** - automatyczne podawanie numerów protokołów i dat
 - ✅ **Tryb interaktywny** - konwersacyjny interfejs do zadawania pytań
 - ✅ **Niski koszt** - DeepSeek V3.2: $0.27/$1.10 per 1M tokens (75x taniej niż Claude)
@@ -31,12 +32,67 @@ Zaawansowany system RAG (Retrieval Augmented Generation) do semantycznego wyszuk
 
 ## Instalacja
 
-```bash
-# 1. Zainstaluj zależności
-pip install -r requirements.txt
+### 1. Zainstaluj zależności
 
-# 2. Skonfiguruj OpenRouter API key
-echo "OPEN_ROUTER_API_KEY=sk-or-v1-..." > .env
+```bash
+pip install -r requirements.txt
+```
+
+### 2. Skonfiguruj klucz API
+
+Skopiuj szablon konfiguracji i dodaj swój klucz API:
+
+```bash
+# Skopiuj szablon
+cp .env.example .env
+
+# Edytuj .env i dodaj swój klucz OpenRouter API
+nano .env
+```
+
+Twój plik `.env` powinien wyglądać tak:
+```
+OPEN_ROUTER_API_KEY=sk-or-v1-your_actual_key_here
+```
+
+**Jak uzyskać klucz API:**
+1. Zarejestruj się na [OpenRouter](https://openrouter.ai/)
+2. Przejdź do [Keys](https://openrouter.ai/keys)
+3. Utwórz nowy klucz API
+4. Skopiuj klucz do pliku `.env`
+
+**⚠️ BEZPIECZEŃSTWO:**
+- **NIGDY** nie commituj pliku `.env` do git (już jest w `.gitignore`)
+- Jeśli klucz wycieknie, natychmiast go zrotuj na https://openrouter.ai/keys
+- Nie udostępniaj klucza publicznie
+
+### 3. Pobierz lub wygeneruj pliki wejściowe
+
+#### Opcja A: Pobierz PDFy (jeśli dostępne)
+
+```bash
+python scripts/download_pdfs.py
+```
+
+#### Opcja B: Dodaj własne PDFy
+
+Umieść pliki PDF w katalogach:
+- `input/` - główne protokoły
+- `input-sp/` - protokoły osiedlowe (opcjonalnie)
+
+**Uwaga:** Katalogi `input/`, `input-sp/`, `output/` i `output-sp/` są ignorowane przez git. Musisz wygenerować je lokalnie.
+
+### 4. Zbuduj cache i indeks Qdrant
+
+```bash
+# Uruchom Qdrant (Docker)
+docker run -p 6333:6333 -v $(pwd)/qdrant_storage:/qdrant/storage qdrant/qdrant
+
+# W nowym terminalu: konwertuj PDFy na Markdown (jeśli masz PDFy)
+python pdf_to_markdown_easyocr.py
+
+# Zbuduj indeks Qdrant
+python scripts/build_index.py
 ```
 
 **Wymagania:**
@@ -215,6 +271,26 @@ qa = ProtocolQASystem(model="anthropic/claude-3.5-sonnet")
 - `anthropic/claude-3.5-sonnet` - Claude 3.5 Sonnet (najlepszy, drogi)
 - `openai/gpt-4o` - GPT-4o (bardzo dobry, drogi)
 - Pełna lista: https://openrouter.ai/models
+
+### Jak dostosować próg jakości wyników?
+
+System filtruje słabe wyniki używając `MIN_RRF_SCORE` (domyślnie 0.04). Możesz to zmienić w [rag/config.py](rag/config.py:32):
+
+```python
+MIN_RRF_SCORE = 0.04  # Domyślny próg
+```
+
+**Wskazówki:**
+- **0.02** - więcej wyników, może zawierać słabe dopasowania
+- **0.04** - zbilansowany (zalecany) ✅
+- **0.06** - tylko bardzo dobre dopasowania, mniej wyników
+- **0.10** - ekstremalnie restrykcyjny, tylko idealne dopasowania
+
+**Typowe wartości RRF score:**
+- 0.08+ - doskonałe dopasowanie (top 3 wyniki)
+- 0.04-0.08 - dobre dopasowanie (wyniki 4-10)
+- 0.02-0.04 - słabe dopasowanie (często nieistotne)
+- <0.02 - bardzo słabe (szum)
 
 ### Czy działa offline?
 
@@ -691,8 +767,14 @@ NUM_RULE_VARIANTS = 2
 ```python
 RRF_K = 60                  # Standard constant
 RESULTS_PER_VARIANT = 10    # Candidates per variant
-DEFAULT_TOP_K = 20          # Final results (zwiększone dla Q&A)
+DEFAULT_TOP_K = 20          # Maximum final results
+MIN_RRF_SCORE = 0.04        # Minimum quality threshold (filters weak matches)
 ```
+
+**Filtrowanie jakości:**
+- System zwraca maksymalnie 20 wyników, ale tylko te z RRF score > 0.04
+- W praktyce zwraca 5-15 wyników wysokiej jakości
+- Eliminuje słabe dopasowania (score < 0.04) które mogłyby wprowadzać szum
 
 ### Cache
 ```python
@@ -937,14 +1019,35 @@ cache.clear()  # Usuń wszystkie wpisy
 2. Zmniejsz `NUM_LLM_VARIANTS` z 2 → 1
 3. Poczekaj na wzrost cache hit rate (po ~50 queries)
 
-### Problem: Niska jakość wyników
+### Problem: Za dużo słabych wyników
 
-**Symptom:** Top 5 results bardzo podobne lub nieistotne
+**Symptom:** Wyniki z niskim RRF score (0.01-0.03), nieistotne dokumenty
 
 **Rozwiązanie:**
-1. Dostosuj `RRF_K` w [config.py](rag/config.py:26): 60 → 40 (większa diversity)
+Zwiększ `MIN_RRF_SCORE` w [config.py](rag/config.py:32):
+```python
+MIN_RRF_SCORE = 0.06  # Zamiast 0.04 (bardziej restrykcyjny)
+```
+
+### Problem: Za mało wyników
+
+**Symptom:** System zwraca tylko 2-3 wyniki, chociaż istnieją inne istotne dokumenty
+
+**Rozwiązanie:**
+1. Zmniejsz `MIN_RRF_SCORE` w [config.py](rag/config.py:32):
+   ```python
+   MIN_RRF_SCORE = 0.02  # Zamiast 0.04 (mniej restrykcyjny)
+   ```
 2. Zwiększ `RESULTS_PER_VARIANT`: 10 → 15 (więcej candidatów)
-3. Rozszerz słownik synonimów w [query_expander.py](rag/query_expander.py:14-27)
+3. Dostosuj `RRF_K`: 60 → 40 (większa diversity)
+
+### Problem: Wyniki bardzo podobne lub powtarzające się
+
+**Symptom:** Top 5 results z tego samego dokumentu, brak różnorodności
+
+**Rozwiązanie:**
+1. Dostosuj `RRF_K` in [config.py](rag/config.py:26): 60 → 40 (większa diversity)
+2. Rozszerz słownik synonimów w [query_expander.py](rag/query_expander.py:14-27)
 
 ---
 
