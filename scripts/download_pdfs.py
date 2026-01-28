@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Skrypt do pobierania plików PDF z pliku files.json
+Script for downloading PDF files from files.json
 """
 
 import json
@@ -14,55 +14,55 @@ import re
 
 def sanitize_filename(filename: str) -> str:
     """
-    Tworzy bezpieczną nazwę pliku usuwając/zamieniając problematyczne znaki.
+    Creates a safe filename by removing/replacing problematic characters.
 
     Args:
-        filename: Oryginalna nazwa pliku
+        filename: Original filename
 
     Returns:
-        Bezpieczna nazwa pliku
+        Safe filename
     """
-    # Normalizuj unicode (zamień znaki akcentowane na podstawowe)
+    # Normalize unicode (convert accented characters to base characters)
     # NFD = Normalization Form Canonical Decomposition
     nfkd_form = unicodedata.normalize('NFKD', filename)
 
-    # Pozostaw tylko znaki ASCII
+    # Keep only ASCII characters
     ascii_string = nfkd_form.encode('ASCII', 'ignore').decode('ASCII')
 
-    # Zamień pozostałe problematyczne znaki
+    # Replace remaining problematic characters
     safe_string = re.sub(r'[<>:"/\\|?*]', '_', ascii_string)
 
-    # Usuń wielokrotne podkreślenia i spacje
+    # Remove multiple underscores and spaces
     safe_string = re.sub(r'[_\s]+', '_', safe_string)
 
-    # Usuń podkreślenia na początku i końcu
+    # Remove underscores at the beginning and end
     safe_string = safe_string.strip('_')
 
     return safe_string
 
 
-def download_pdfs(json_file: str = "input/files-sp.json", output_dir: str = "input-sp"):
+def download_pdfs(json_file: str = "input/files.json", output_dir: str = "input"):
     """
-    Pobiera wszystkie pliki PDF z tablicy w pliku JSON.
+    Downloads all PDF files from the array in the JSON file.
 
     Args:
-        json_file: Ścieżka do pliku JSON z danymi
-        output_dir: Katalog docelowy dla pobranych plików
+        json_file: Path to the JSON file with data
+        output_dir: Target directory for downloaded files
     """
-    # Wczytaj plik JSON
+    # Load JSON file
     with open(json_file, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
-    # Upewnij się, że katalog docelowy istnieje
+    # Ensure the target directory exists
     Path(output_dir).mkdir(parents=True, exist_ok=True)
 
-    # Liczniki
+    # Counters
     total = len(data)
     downloaded = 0
     errors = 0
 
-    print(f"Znaleziono {total} pozycji w pliku JSON")
-    print(f"Katalog docelowy: {output_dir}\n")
+    print(f"Found {total} entries in JSON file")
+    print(f"Target directory: {output_dir}\n")
 
     for idx, item in enumerate(data, 1):
         file_url = item.get('file', '')
@@ -70,32 +70,32 @@ def download_pdfs(json_file: str = "input/files-sp.json", output_dir: str = "inp
         filedesc = item.get('filedesc', '')
 
         if not file_url:
-            print(f"[{idx}/{total}] Pominięto - brak URL")
+            print(f"[{idx}/{total}] Skipped - no URL")
             continue
 
-        # Twórz nazwę pliku z filename i filedesc
+        # Create filename from filename and filedesc
         if filedesc:
             combined_name = f"{filename} - {filedesc}"
         else:
             combined_name = filename
 
-        # Sanityzuj nazwę pliku
+        # Sanitize filename
         safe_filename = sanitize_filename(combined_name)
         local_filename = f"{safe_filename}.pdf"
 
         local_path = os.path.join(output_dir, local_filename)
 
         try:
-            print(f"[{idx}/{total}] Pobieranie: {filename}")
+            print(f"[{idx}/{total}] Downloading: {filename}")
             print(f"  URL: {file_url}")
-            print(f"  Zapisywanie jako: {local_filename}")
+            print(f"  Saving as: {local_filename}")
 
-            # Zakoduj URL (zamień znaki specjalne na %XX)
-            # URL już zawiera częściowe kodowanie, ale trzeba dokodować ścieżkę
+            # Encode URL (replace special characters with %XX)
+            # URL already contains partial encoding, but need to encode the path
             parsed = urllib.parse.urlparse(file_url)
-            # Zakoduj ścieżkę używając quote - safe='/' zachowuje slashe
+            # Encode path using quote - safe='/' preserves slashes
             encoded_path = urllib.parse.quote(parsed.path, safe='/')
-            # Zbuduj zakodowany URL
+            # Build encoded URL
             encoded_url = urllib.parse.urlunparse((
                 parsed.scheme,
                 parsed.netloc,
@@ -105,7 +105,7 @@ def download_pdfs(json_file: str = "input/files-sp.json", output_dir: str = "inp
                 parsed.fragment
             ))
 
-            # Pobierz plik - użyj urllib z odpowiednimi nagłówkami
+            # Download file - use urllib with appropriate headers
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
@@ -116,20 +116,20 @@ def download_pdfs(json_file: str = "input/files-sp.json", output_dir: str = "inp
                     out_file.write(response.read())
 
             downloaded += 1
-            print(f"  ✓ Pobrano pomyślnie\n")
+            print(f"  ✓ Downloaded successfully\n")
 
         except Exception as e:
             errors += 1
             import traceback
-            print(f"  ✗ Błąd podczas pobierania: {str(e)}")
-            print(f"  Szczegóły:\n{traceback.format_exc()}")
+            print(f"  ✗ Error while downloading: {str(e)}")
+            print(f"  Details:\n{traceback.format_exc()}")
 
-    # Podsumowanie
+    # Summary
     print("=" * 60)
-    print(f"Podsumowanie:")
-    print(f"  Razem pozycji: {total}")
-    print(f"  Pobrano pomyślnie: {downloaded}")
-    print(f"  Błędy: {errors}")
+    print(f"Summary:")
+    print(f"  Total entries: {total}")
+    print(f"  Downloaded successfully: {downloaded}")
+    print(f"  Errors: {errors}")
     print("=" * 60)
 
 

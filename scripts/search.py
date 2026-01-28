@@ -18,14 +18,14 @@ def format_result(result, index):
         index: Result index (1-based)
     """
     print(f"\n{'=' * 70}")
-    print(f"{index}. [Protokół nr {result['protocol_number']}, Strona {result['page']}] "
+    print(f"{index}. [Protocol No. {result['protocol_number']}, Page {result['page']}] "
           f"(RRF: {result['rrf_score']:.4f})")
-    print(f"Źródło: {result['source']}")
-    print(f"Data: {result['date_range']}")
+    print(f"Source: {result['source']}")
+    print(f"Date: {result['date_range']}")
 
     # Show contributing variants
     if "contributing_variants" in result:
-        print(f"Znalezione przez {result['num_variants']} wariantów zapytania")
+        print(f"Found by {result['num_variants']} query variants")
 
     print(f"\n{result['text'][:800]}")  # Show first 800 chars
     if len(result['text']) > 800:
@@ -45,23 +45,23 @@ def format_metadata(search_response, verbose=False):
         return
 
     print("\n" + "-" * 70)
-    print("Szczegóły wyszukiwania:")
-    print(f"  Warianty zapytań: {len(search_response['variants'])}")
+    print("Search details:")
+    print(f"  Query variants: {len(search_response['variants'])}")
 
     if verbose:
         for i, variant in enumerate(search_response['variants'], 1):
             print(f"    {i}. [{variant['method']}] {variant['text']}")
 
     fusion_stats = search_response['fusion_stats']
-    print(f"\n  Statystyki fuzji (RRF):")
-    print(f"    Średnia wariantów na wynik: {fusion_stats['avg_variants_per_result']}")
+    print(f"\n  Fusion statistics (RRF):")
+    print(f"    Average variants per result: {fusion_stats['avg_variants_per_result']}")
 
     cache_stats = search_response['cache_stats']
     print(f"\n  Cache:")
-    print(f"    Trafienia: {cache_stats['cache_hits']}")
-    print(f"    Chybienia: {cache_stats['cache_misses']}")
-    print(f"    Współczynnik trafień: {cache_stats['cache_hit_rate']}")
-    print(f"    Wywołania API: {cache_stats['api_calls']}")
+    print(f"    Hits: {cache_stats['cache_hits']}")
+    print(f"    Misses: {cache_stats['cache_misses']}")
+    print(f"    Hit rate: {cache_stats['cache_hit_rate']}")
+    print(f"    API calls: {cache_stats['api_calls']}")
 
     print("-" * 70)
 
@@ -69,7 +69,7 @@ def format_metadata(search_response, verbose=False):
 def print_header():
     """Print application header"""
     print("\n" + "=" * 70)
-    print("RAG Search - Protokoły Zarządu MSM Energetyka")
+    print("RAG Search - MSM Energetyka Board Protocols")
     print("Enhanced with Query Expansion + RRF")
     print("=" * 70)
 
@@ -85,17 +85,17 @@ def single_query_mode(query, retriever, top_k=5, verbose=False):
         verbose: Show detailed information
     """
     print_header()
-    print(f"\nWyniki wyszukiwania dla: \"{query}\"")
+    print(f"\nSearch results for: \"{query}\"")
 
     search_response = retriever.search(query, top_k=top_k, verbose=verbose)
     results = search_response["results"]
 
     if not results:
-        print("\nNie znaleziono wyników.")
-        print("Spróbuj zmienić zapytanie lub sprawdź czy indeks został zbudowany.")
+        print("\nNo results found.")
+        print("Try changing your query or check if the index has been built.")
         return
 
-    print(f"Znaleziono {len(results)} wyników\n")
+    print(f"Found {len(results)} results\n")
 
     for idx, result in enumerate(results, 1):
         format_result(result, idx)
@@ -114,39 +114,39 @@ def interactive_mode(retriever, top_k=5, verbose=False):
         verbose: Show detailed information
     """
     print_header()
-    print("\nTryb interaktywny - wpisz zapytanie lub 'exit' aby zakończyć")
-    print("Komendy specjalne:")
-    print("  --verbose      - włącz tryb szczegółowy")
-    print("  --stats        - pokaż statystyki")
-    print("  exit/quit      - zakończ")
-    print("\nPrzykładowe zapytania:")
-    print("  - sprawy pracownicze")
-    print("  - wiaty śmietnikowe")
-    print("  - ul. Konstancińska")
-    print("  - Komisja Przetargowa")
+    print("\nInteractive mode - type your query or 'exit' to quit")
+    print("Special commands:")
+    print("  --verbose      - toggle verbose mode")
+    print("  --stats        - show statistics")
+    print("  exit/quit      - quit")
+    print("\nExample queries:")
+    print("  - employee matters")
+    print("  - garbage shelters")
+    print("  - Konstancinska street")
+    print("  - Tender Commission")
     print()
 
     while True:
         try:
-            query = input("Zapytanie: ").strip()
+            query = input("Query: ").strip()
 
             if query.lower() in ['exit', 'quit', 'q', 'wyjście', 'koniec']:
-                print("\nDo widzenia!")
+                print("\nGoodbye!")
                 break
 
             if query == "--verbose":
                 verbose = not verbose
-                print(f"Tryb szczegółowy: {'włączony' if verbose else 'wyłączony'}")
+                print(f"Verbose mode: {'enabled' if verbose else 'disabled'}")
                 continue
 
             if query == "--stats":
                 stats = retriever.get_stats()
-                print("\nStatystyki:")
-                print(f"  Przetworzone zapytania: {stats['queries_processed']}")
-                print(f"  Wygenerowane warianty: {stats['total_variants_generated']}")
-                print(f"  Cache - trafienia: {stats['embedder_stats']['cache_hits']}")
-                print(f"  Cache - chybienia: {stats['embedder_stats']['cache_misses']}")
-                print(f"  Cache - współczynnik: {stats['embedder_stats']['cache_hit_rate']}")
+                print("\nStatistics:")
+                print(f"  Queries processed: {stats['queries_processed']}")
+                print(f"  Variants generated: {stats['total_variants_generated']}")
+                print(f"  Cache - hits: {stats['embedder_stats']['cache_hits']}")
+                print(f"  Cache - misses: {stats['embedder_stats']['cache_misses']}")
+                print(f"  Cache - hit rate: {stats['embedder_stats']['cache_hit_rate']}")
                 continue
 
             if not query:
@@ -156,10 +156,10 @@ def interactive_mode(retriever, top_k=5, verbose=False):
             results = search_response["results"]
 
             if not results:
-                print("\nNie znaleziono wyników.")
+                print("\nNo results found.")
                 continue
 
-            print(f"\nZnaleziono {len(results)} wyników\n")
+            print(f"\nFound {len(results)} results\n")
 
             for idx, result in enumerate(results, 1):
                 format_result(result, idx)
@@ -170,10 +170,10 @@ def interactive_mode(retriever, top_k=5, verbose=False):
             print()
 
         except KeyboardInterrupt:
-            print("\n\nDo widzenia!")
+            print("\n\nGoodbye!")
             break
         except Exception as e:
-            print(f"\n❌ Błąd: {e}")
+            print(f"\n❌ Error: {e}")
             import traceback
             if verbose:
                 traceback.print_exc()
@@ -188,9 +188,9 @@ def main():
             sys.argv.remove("--verbose")
 
         # Initialize retriever
-        print("Inicjalizacja wyszukiwarki...")
+        print("Initializing search engine...")
         retriever = EnhancedProtocolRetriever()
-        print("✓ Gotowe!\n")
+        print("✓ Ready!\n")
 
         if len(sys.argv) > 1:
             # Single query mode
@@ -201,11 +201,11 @@ def main():
             interactive_mode(retriever, verbose=verbose)
 
     except Exception as e:
-        print(f"\n❌ Błąd: {e}")
-        print("\nUpewnij się, że:")
-        print("1. Qdrant działa (docker run -p 6333:6333 qdrant/qdrant)")
-        print("2. Indeks został zbudowany (python scripts/build_index.py)")
-        print("3. Plik .env zawiera OPEN_ROUTER_API_KEY")
+        print(f"\n❌ Error: {e}")
+        print("\nMake sure that:")
+        print("1. Qdrant is running (docker run -p 6333:6333 qdrant/qdrant)")
+        print("2. Index has been built (python scripts/build_index.py)")
+        print("3. .env file contains OPEN_ROUTER_API_KEY")
         import traceback
         traceback.print_exc()
         sys.exit(1)

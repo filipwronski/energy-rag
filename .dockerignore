@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.pytest_cache/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git/
+.gitignore
+
+# secrets
+qdrant_storage/
+embedding_cache.db
+input/*.pdf
+output/*.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/

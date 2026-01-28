@@ -1,3 +1,8 @@
+# PyTorch CPU-only (przed EasyOCR aby wymusić wersję bez CUDA)
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.10.0+cpu
+torchvision==0.25.0+cpu
+
 pymupdf>=1.23.0
 easyocr>=1.7.0
 Pillow>=10.0.0

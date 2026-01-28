@@ -9,7 +9,8 @@ from .rrf_aggregator import RRFAggregator
 from .config import (
     QDRANT_URL, COLLECTION_NAME,
     NUM_QUERY_VARIANTS, RESULTS_PER_VARIANT,
-    DEFAULT_TOP_K, RRF_K, ENABLE_CACHE, CACHE_DB_PATH
+    DEFAULT_TOP_K, RRF_K, MIN_RRF_SCORE,
+    ENABLE_CACHE, CACHE_DB_PATH
 )
 
 
@@ -74,21 +75,23 @@ class EnhancedProtocolRetriever:
                top_k: int = DEFAULT_TOP_K,
                num_variants: int = NUM_QUERY_VARIANTS,
                results_per_variant: int = RESULTS_PER_VARIANT,
+               min_rrf_score: float = MIN_RRF_SCORE,
                verbose: bool = False) -> Dict:
         """
         Enhanced search with query expansion and RRF
 
         Args:
             query: Original search query
-            top_k: Number of final results to return after RRF
+            top_k: Maximum number of final results to return after RRF
             num_variants: Number of query variants to generate
             results_per_variant: Number of results to fetch per variant
+            min_rrf_score: Minimum RRF score threshold (filters weak results)
             verbose: Print detailed progress information
 
         Returns:
             Dictionary with results and metadata:
             {
-                "results": [...],  # Top K fused results
+                "results": [...],  # Top K fused results (filtered by min_rrf_score)
                 "query": str,  # Original query
                 "variants": [...],  # Generated variants with methods
                 "fusion_stats": {...},  # RRF fusion statistics
@@ -122,11 +125,12 @@ class EnhancedProtocolRetriever:
         # 3. Apply RRF aggregation
         if verbose:
             print(f"\n   Applying Reciprocal Rank Fusion...")
+            print(f"      Min RRF score threshold: {min_rrf_score}")
 
-        fused_results = self.rrf_aggregator.fuse(all_results, top_k=top_k)
+        fused_results = self.rrf_aggregator.fuse(all_results, top_k=top_k, min_score=min_rrf_score)
 
         if verbose:
-            print(f"      ✓ Fused to {len(fused_results)} final results")
+            print(f"      ✓ Fused to {len(fused_results)} final results (filtered by quality)")
             fusion_stats = self.rrf_aggregator.get_fusion_stats(fused_results)
             print(f"      Avg variants per result: {fusion_stats['avg_variants_per_result']}")
 

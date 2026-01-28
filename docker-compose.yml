@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: energy-rag-qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - ./qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+    networks:
+      - energy-rag-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        USER_ID: ${USER_ID:-1000}
+        GROUP_ID: ${GROUP_ID:-1000}
+    container_name: energy-rag-app
+    depends_on:
+      - qdrant
+    volumes:
+      - ./input:/app/input
+      - ./output:/app/output
+
+      - ./embedding_cache.db:/app/data/embedding_cache.db
+
+      - ./.env:/app/.env:ro
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+      - CACHE_DB_PATH=/app/data/embedding_cache.db
+    networks:
+      - energy-rag-network
+    stdin_open: true
+    tty: true
+
+networks:
+  energy-rag-network:
+    driver: bridge

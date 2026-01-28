@@ -1,592 +1,273 @@
-# Energy RAG - System Wyszukiwania Protokołów
+# Energy RAG - Protocol Document Search System
 
-Zaawansowany system RAG (Retrieval Augmented Generation) do semantycznego wyszukiwania w protokołach zarządu MSM Energetyka z wykorzystaniem:
-- 🚀 **OpenRouter API** - embeddings `text-embedding-3-small` (1536-dim)
-- 🔄 **Query Expansion** - hybrydowe generowanie wariantów zapytań (LLM + reguły)
-- 🎯 **Reciprocal Rank Fusion** - inteligentna agregacja wyników
-- 💾 **SQLite Cache** - redukcja kosztów API o 80-90%
-- 📄 **OCR** - konwersja PDF na Markdown z EasyOCR
+An advanced RAG (Retrieval Augmented Generation) system for semantic search files, featuring:
 
-## Kluczowe Funkcje
+- 🚀 **OpenRouter API** - `text-embedding-3-small` embeddings (1536-dim)
+- 🔄 **Query Expansion** - Hybrid query variant generation (LLM + rules)
+- 🎯 **Reciprocal Rank Fusion** - Intelligent result aggregation
+- 💾 **SQLite Cache** - 80-90% API cost reduction
+- 📄 **OCR** - PDF to Markdown conversion with EasyOCR
+- 🤖 **Q&A System** - Natural language answers powered by DeepSeek V3.2
+
+## Table of Contents
+
+- [Key Features](#key-features)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Usage](#usage)
+- [How It Works](#how-it-works)
+- [Costs](#costs)
+- [Configuration](#configuration)
+- [FAQ](#faq)
+
+## Key Features
 
 ### RAG System
-- ✅ **5 wariantów zapytania** - oryginał + 2 LLM + 2 reguły (synonimy, kolejność słów)
-- ✅ **RRF Aggregation** - fuzja 200 wyników (5 wariantów × 10) → top 20 najlepszych
-- ✅ **Embedding Cache** - SQLite z automatycznym tracking hit rate
-- ✅ **Precyzyjne chunki** - 512 znaków z 50 overlap (optymalizacja jakości)
-- ✅ **Cost tracking** - pełna kontrola kosztów API
+- ✅ **5 query variants** - original + 2 LLM + 2 rule-based (synonyms, word order)
+- ✅ **RRF Aggregation** - Fuses 50 results (5 variants × 10) → top 20 best matches
+- ✅ **Embedding Cache** - SQLite with automatic hit rate tracking
+- ✅ **Optimized chunks** - 512 characters with 50 overlap for better precision
+- ✅ **Cost tracking** - Full API cost monitoring
 
-### Q&A System 🆕
-- ✅ **Odpowiedzi w języku naturalnym** - DeepSeek V3.2 generuje odpowiedzi na podstawie RAG
-- ✅ **Inteligentne filtrowanie** - tylko dokumenty wysokiej jakości (RRF score > 0.04)
-- ✅ **Do 20 dokumentów kontekstowych** - adaptacyjna liczba wyników (zwykle 5-15)
-- ✅ **Cytowanie źródeł** - automatyczne podawanie numerów protokołów i dat
-- ✅ **Tryb interaktywny** - konwersacyjny interfejs do zadawania pytań
-- ✅ **Niski koszt** - DeepSeek V3.2: $0.27/$1.10 per 1M tokens (75x taniej niż Claude)
+### Q&A System
+- ✅ **Natural language answers** - DeepSeek V3.2 generates answers based on RAG results
+- ✅ **Smart filtering** - Only high-quality documents (RRF score > 0.04)
+- ✅ **Up to 20 contextual documents** - Adaptive result count (typically 5-15)
+- ✅ **Source citations** - Automatic protocol numbers and dates
+- ✅ **Interactive mode** - Conversational interface for asking questions
+- ✅ **Low cost** - DeepSeek V3.2: $0.27/$1.10 per 1M tokens (75x cheaper than Claude)
 
 ### PDF OCR
-- ✅ Konwersja PDF → Markdown z EasyOCR
-- ✅ OCR dla polskiego i angielskiego
-- ✅ Automatyczna detekcja: tekst PDF vs obrazy
-- ✅ Wysokiej jakości rozpoznawanie tekstu
+- ✅ PDF → Markdown conversion with EasyOCR
+- ✅ OCR for Polish and English
+- ✅ Automatic detection: text PDF vs scanned images
+- ✅ High-quality text recognition
 
-## Instalacja
+## Quick Start
 
-### 1. Zainstaluj zależności
+### 1. Start Qdrant (Docker)
+
+```bash
+docker run -p 6333:6333 -v $(pwd)/qdrant_storage:/qdrant/storage qdrant/qdrant
+```
+
+### 2. Configure API Key
+
+```bash
+# Copy template
+cp .env.example .env
+
+# Edit .env and add your OpenRouter API key
+nano .env
+```
+
+Get your API key at [OpenRouter](https://openrouter.ai/keys)
+
+### 3. Build Index
+
+```bash
+# If you have PDFs: Convert to Markdown first
+python pdf_to_markdown_easyocr.py
+
+# Build Qdrant index
+python scripts/build_index.py
+```
+
+**One-time cost**: ~$0.01-0.02 for ~4,500 chunks
+
+### 4. Ask Questions
+
+**Q&A System (natural language answers):**
+```bash
+python scripts/ask.py "what renovations were done at Bonifacego 66?"
+```
+
+**Classic Search (retrieve fragments):**
+```bash
+python scripts/search.py "employee matters"
+```
+
+## Installation
+
+### Requirements
+
+- Docker
+- 4GB RAM minimum (8GB recommended)
+- 2GB free disk space
+
+### 1. Install Dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 2. Skonfiguruj klucz API
+### 2. Configure API Key
 
-Skopiuj szablon konfiguracji i dodaj swój klucz API:
+Create a `.env` file with your OpenRouter API key:
 
 ```bash
-# Skopiuj szablon
 cp .env.example .env
-
-# Edytuj .env i dodaj swój klucz OpenRouter API
-nano .env
 ```
 
-Twój plik `.env` powinien wyglądać tak:
+Edit `.env`:
 ```
 OPEN_ROUTER_API_KEY=sk-or-v1-your_actual_key_here
 ```
 
-**Jak uzyskać klucz API:**
-1. Zarejestruj się na [OpenRouter](https://openrouter.ai/)
-2. Przejdź do [Keys](https://openrouter.ai/keys)
-3. Utwórz nowy klucz API
-4. Skopiuj klucz do pliku `.env`
+**How to get API key:**
+1. Register at [OpenRouter](https://openrouter.ai/)
+2. Go to [Keys](https://openrouter.ai/keys)
+3. Create new API key
+4. Copy key to `.env` file
 
-**⚠️ BEZPIECZEŃSTWO:**
-- **NIGDY** nie commituj pliku `.env` do git (już jest w `.gitignore`)
-- Jeśli klucz wycieknie, natychmiast go zrotuj na https://openrouter.ai/keys
-- Nie udostępniaj klucza publicznie
+**⚠️ SECURITY:**
+- **NEVER** commit `.env` to git (already in `.gitignore`)
+- If key leaks, rotate it immediately at https://openrouter.ai/keys
+- Don't share your key publicly
 
-### 3. Pobierz lub wygeneruj pliki wejściowe
+### 3. Prepare Input Files
 
-#### Opcja A: Pobierz PDFy (jeśli dostępne)
+#### Option A: Download PDFs (if available)
 
 ```bash
 python scripts/download_pdfs.py
 ```
 
-#### Opcja B: Dodaj własne PDFy
+#### Option B: Add Your Own PDFs
 
-Umieść pliki PDF w katalogach:
-- `input/` - główne protokoły
-- `input-sp/` - protokoły osiedlowe (opcjonalnie)
+Place PDF files in directories:
+- `input/` - main protocols
+- `input-sp/` - estate protocols (optional)
 
-**Uwaga:** Katalogi `input/`, `input-sp/`, `output/` i `output-sp/` są ignorowane przez git. Musisz wygenerować je lokalnie.
+**Note:** Directories `input/`, `input-sp/`, `output/` and `output-sp/` are git-ignored. You must generate them locally.
 
-### 4. Zbuduj cache i indeks Qdrant
+### 4. Build Index
 
 ```bash
-# Uruchom Qdrant (Docker)
+# Start Qdrant (Docker)
 docker run -p 6333:6333 -v $(pwd)/qdrant_storage:/qdrant/storage qdrant/qdrant
 
-# W nowym terminalu: konwertuj PDFy na Markdown (jeśli masz PDFy)
+# In new terminal: Convert PDFs to Markdown (if you have PDFs)
 python pdf_to_markdown_easyocr.py
 
-# Zbuduj indeks Qdrant
+# Build Qdrant index
 python scripts/build_index.py
 ```
 
-**Wymagania:**
-- Python 3.8+
-- Docker (dla Qdrant)
-- OpenRouter API key ([uzyskaj tutaj](https://openrouter.ai/))
-- ~2GB wolnego miejsca
+## Usage
 
----
+### Q&A System (Natural Language Answers)
 
-## PDF to Markdown (OCR)
-
-### Konwersja PDF na Markdown
-
-System używa EasyOCR do rozpoznawania tekstu z zeskanowanych PDF.
-
+**Basic mode:**
 ```bash
-# Pobierz PDFy (opcjonalnie)
-python scripts/download_pdfs.py
-
-# Konwertuj PDF → Markdown
-python pdf_to_markdown_easyocr.py
+python scripts/ask.py "what repairs were done at Bonifacego Street?"
 ```
 
-**Proces:**
-1. PyMuPDF wyciąga strony jako obrazy
-2. EasyOCR rozpoznaje tekst (polski + angielski)
-3. Formatowanie jako Markdown z nagłówkami stron
-4. Zapisz do `output/`
-
-**Przykład wyniku:**
-```markdown
-# Protokół nr 1 z ustaleń Zarządu w dniach  02.-14.01.2025 r
-
-*Dokument zawiera 3 stron*
-*Tekst rozpoznany automatycznie przez OCR*
-
----
-
-## Strona 1
-
-Protokół nr 1
-ustaleń Zarządu MSM "Energetyka"
-w dniach 02.-14.01.2025 r.
-...
-```
-
-**Dokładność OCR:**
-- ✅ Czysty druk: 95-99%
-- ✅ Skanowane dokumenty: 90-95%
-- ⚠️ Pisane ręcznie: 60-80%
-
-**Rozwiązywanie problemów OCR:**
-- Sprawdź jakość skanów (min 150 DPI)
-- Jasne obrazy z dobrym kontrastem
-- Pierwsze uruchomienie pobiera modele (~100-200MB)
-
-## Struktura projektu
-
-```
-energy-rag/
-├── input/                          # Pliki PDF do konwersji
-├── output/                         # Wygenerowane pliki Markdown
-├── rag/                           # Moduł RAG (Enhanced)
-│   ├── config.py                  # Konfiguracja (embeddings, RRF, cache)
-│   ├── openrouter_client.py       # OpenRouter API client z retry logic
-│   ├── cache.py                   # SQLite cache dla embeddings
-│   ├── openrouter_embedder.py     # Embedder z cache integration
-│   ├── query_expander.py          # Hybrydowa ekspansja zapytań
-│   ├── rrf_aggregator.py          # Reciprocal Rank Fusion
-│   ├── enhanced_retriever.py      # Główny orchestrator
-│   ├── qa_system.py               # System Q&A z LLM
-│   ├── chunker.py                 # Parsowanie i dzielenie dokumentów
-│   └── retriever.py               # Legacy retriever (backward compatibility)
-├── scripts/                       # Skrypty użytkowe
-│   ├── build_index.py             # Indeksowanie z cost estimation
-│   ├── search.py                  # Enhanced CLI (--verbose, --stats)
-│   ├── ask.py                     # Q&A system - odpowiedzi w języku naturalnym
-│   └── download_pdfs.py           # Pobieranie PDF
-├── tests/                         # Testy
-│   └── test_retrieval.py          # Test suite dla RAG
-├── .env                           # API keys (OPEN_ROUTER_API_KEY)
-├── embedding_cache.db             # SQLite cache (auto-generated)
-├── requirements.txt               # Zależności Python
-└── README.md                      # Dokumentacja
-```
-
----
-
-## Wymagania Systemowe
-
-### Minimalne
-- Python 3.8+
-- Docker (dla Qdrant)
-- 4GB RAM
-- 2GB wolnego miejsca
-
-### Zalecane
-- Python 3.10+
-- 8GB RAM (dla OCR + RAG)
-- SSD dla szybszego cache access
-
-### Zależności Python
-```
-# Core
-qdrant-client>=1.7.0
-requests>=2.31.0
-python-dotenv>=1.0.0
-
-# OCR (opcjonalne - tylko dla konwersji PDF)
-pymupdf>=1.23.0
-easyocr>=1.7.0
-Pillow>=10.0.0
-numpy>=1.24.0
-```
-
----
-
-## FAQ
-
-### Czy mogę użyć innego modelu embeddings?
-
-Tak! Zmień w [rag/config.py](rag/config.py:8):
-```python
-EMBEDDING_MODEL = "openai/text-embedding-3-large"  # Większy model
-EMBEDDING_DIM = 3072
-```
-
-**Uwaga:** Wymaga przeindeksowania bazy.
-
-### Czy mogę wrócić do lokalnego modelu (bez API)?
-
-Tak, zachowaliśmy backward compatibility. Zakomentuj nowe moduły i użyj starego `PolishEmbedder`:
-
-```python
-# In scripts/search.py
-from rag.retriever import ProtocolRetriever  # Old retriever
-```
-
-### Jak często powinienem czyścić cache?
-
-Nigdy, chyba że:
-- Cache > 100MB (sprawdź: `ls -lh embedding_cache.db`)
-- Zmieniasz model embeddings
-- Testujesz cache hit rate od zera
-
-### Czy mogę użyć innego LLM do query expansion?
-
-Tak! W [rag/query_expander.py](rag/query_expander.py:expand_hybrid):
-```python
-# Zmień model
-payload = {
-    "model": "anthropic/claude-3.5-sonnet",  # Zamiast gpt-4o-mini
-    ...
-}
-```
-
-### Czy mogę użyć innego modelu LLM do Q&A?
-
-Tak! System Q&A domyślnie używa DeepSeek V3.2 (tani i dobry), ale możesz zmienić na inny:
-
-**Opcja 1:** Zmień domyślny model w [rag/qa_system.py](rag/qa_system.py:13):
-```python
-def __init__(self, model: str = "anthropic/claude-3.5-sonnet"):  # Zamiast deepseek/deepseek-chat
-```
-
-**Opcja 2:** Podaj model podczas inicjalizacji:
-```python
-from rag.qa_system import ProtocolQASystem
-qa = ProtocolQASystem(model="anthropic/claude-3.5-sonnet")
-```
-
-**Dostępne modele na OpenRouter:**
-- `deepseek/deepseek-chat` - DeepSeek V3.2 (najtańszy, dobry) ✅
-- `google/gemini-2.0-flash-exp:free` - Gemini 2.0 Flash (darmowy!)
-- `anthropic/claude-3.5-sonnet` - Claude 3.5 Sonnet (najlepszy, drogi)
-- `openai/gpt-4o` - GPT-4o (bardzo dobry, drogi)
-- Pełna lista: https://openrouter.ai/models
-
-### Jak dostosować próg jakości wyników?
-
-System filtruje słabe wyniki używając `MIN_RRF_SCORE` (domyślnie 0.04). Możesz to zmienić w [rag/config.py](rag/config.py:32):
-
-```python
-MIN_RRF_SCORE = 0.04  # Domyślny próg
-```
-
-**Wskazówki:**
-- **0.02** - więcej wyników, może zawierać słabe dopasowania
-- **0.04** - zbilansowany (zalecany) ✅
-- **0.06** - tylko bardzo dobre dopasowania, mniej wyników
-- **0.10** - ekstremalnie restrykcyjny, tylko idealne dopasowania
-
-**Typowe wartości RRF score:**
-- 0.08+ - doskonałe dopasowanie (top 3 wyniki)
-- 0.04-0.08 - dobre dopasowanie (wyniki 4-10)
-- 0.02-0.04 - słabe dopasowanie (często nieistotne)
-- <0.02 - bardzo słabe (szum)
-
-### Czy działa offline?
-
-Nie w obecnej wersji (wymaga OpenRouter API). Dla offline:
-1. Przywróć `PolishEmbedder` (lokalny model)
-2. Wyłącz LLM expansion (tylko rule-based)
-3. Przeindeksuj z lokalnym modelem
-
----
-
-## Roadmap
-
-### Planowane Funkcje
-
-- [ ] **Semantic Reranking** - 2-stage retrieval z cross-encoder
-- [ ] **Query Classification** - filtrowanie po typie protokołu
-- [ ] **Highlight Variants** - pokazywanie które słowa z wariantów pasują
-- [ ] **A/B Testing** - porównanie z poprzednim systemem
-- [ ] **Streaming Results** - progressive display dla długich wyników
-- [ ] **Multi-language Support** - rozszerzenie na inne języki
-- [ ] **Web UI** - interfejs graficzny (Streamlit/Gradio)
-
-### Możliwe Optymalizacje
-
-- [ ] **Hybrid Search** - połączenie vector + keyword (BM25)
-- [ ] **Result Caching** - cache całych wyników (nie tylko embeddings)
-- [ ] **Batch Querying** - obsługa wielu zapytań jednocześnie
-- [ ] **Custom Synonyms** - learning from query logs
-- [ ] **Feedback Loop** - implicit relevance feedback
-
----
-
-## Contributing
-
-Zgłaszaj bugi i propozycje funkcji przez [GitHub Issues](https://github.com/fwronski/energy-rag/issues).
-
-Pull requesty mile widziane! 🎉
-
----
-
-## Licencja
-
-Open source - wykorzystuj dowolnie!
-
----
-
-## Acknowledgments
-
-Technologie użyte w projekcie:
-- **OpenRouter** - unified LLM & embeddings API
-- **Qdrant** - vector database
-- **EasyOCR** - optical character recognition
-- **PyMuPDF** - PDF processing
-- **Anthropic Claude** - code generation & planning
-
----
-
-**Built with ❤️ for better document search**
-
-# Wyszukiwarka RAG - Szybki Start
-
-## 1. Uruchom Qdrant (Docker)
-
-```bash
-docker run -p 6333:6333 -v $(pwd)/qdrant_storage:/qdrant/storage qdrant/qdrant
-```
-
-## 2. Przeindeksuj dokumenty
-
-```bash
-python scripts/build_index.py
-```
-
-**Co się dzieje:**
-- Przetwarzanie ~458 plików markdown z `output/`
-- Chunking: 512 znaków z 50 overlap → ~4,500-5,000 chunków
-- Embeddings przez OpenRouter API (`text-embedding-3-small`)
-- Oszacowanie kosztów i potwierdzenie przed rozpoczęciem
-- **Koszt jednorazowy: ~$0.01-0.02**
-- Czas: ~5-10 minut
-
-**Przykładowy output:**
+**Output example:**
 ```
 ======================================================================
-Building Qdrant index for protocol documents
-======================================================================
-
-1. Initializing Qdrant client and embedder...
-   ✓ OpenRouter embedder initialized (cache: enabled)
-
-2. Creating collection 'energy_protocols'...
-   ✓ Created collection with 1536-dim vectors, cosine distance
-
-3. Processing documents...
-   ✓ Processed 458 files
-
-4. Estimating indexing cost...
-   Chunks to embed: 4,832
-   Estimated tokens: 483,200
-   Estimated cost: $0.0097
-
-   Proceed with indexing? (yes/no): yes
-
-5. Generating embeddings and indexing 4,832 chunks...
-   Processing chunks 1-50/4832...
-   Processing chunks 51-100/4832...
-   ...
-
-✓ Indexing complete!
-✓ Time elapsed: 287.3s (0.06s per chunk)
-✓ Actual cost: ~$0.0097
-```
-
-## 3a. Zadawaj pytania (Q&A System) 🆕
-
-### Tryb podstawowy
-
-```bash
-python scripts/ask.py "jakie remonty były przeprowadzane przy ul. Bonifacego 66?"
-```
-
-**Output:**
-```
-======================================================================
-Q&A System - Protokoły Zarządu MSM Energetyka
+Q&A System
 Powered by RAG + DeepSeek V3.2
 ======================================================================
 
-Pytanie: jakie remonty były przeprowadzane przy ul. Bonifacego 66?
+Question: what repairs were done at Bonifacego Street?
 
 ======================================================================
-ODPOWIEDŹ:
+ANSWER:
 ======================================================================
-Na podstawie przeszukanych dokumentów, w budynku przy ul. Bonifacego 66
-przeprowadzono następujące remonty:
+Based on searched documents, the following repairs were conducted
+at Bonifacego 66:
 
-1. **Remont instalacji c.o.** (Protokół nr 15, 2024)
-   - Wymiana grzejników w lokalach
-   - Koszt: 45 000 zł
+1. **Heating system renovation** (Protocol #15, 2024)
+   - Radiator replacement in apartments
+   - Cost: 45,000 PLN
 
-2. **Remont dachu** (Protokół nr 23, 2023)
-   - Naprawa pokrycia dachowego
-   - Wymiana rynien
-   - Koszt: 78 000 zł
+2. **Roof repair** (Protocol #23, 2023)
+   - Roof covering repair
+   - Gutter replacement
+   - Cost: 78,000 PLN
 
-3. **Remont klatki schodowej** (Protokół nr 8, 2023)
-   - Malowanie ścian
-   - Wymiana lamp
-   - Koszt: 12 000 zł
-
-📚 Źródła (20 dokumentów):
-  1. Protokół nr 15, Strona 2 (Data: 19.08.-03.09.2024)
-  2. Protokół nr 23, Strona 1 (Data: 21.-28.06.2023)
+📚 Sources (20 documents):
+  1. Protocol #15, Page 2 (Date: 19.08.-03.09.2024)
+  2. Protocol #23, Page 1 (Date: 21.-28.06.2023)
   ...
 ======================================================================
 ```
 
-### Tryb interaktywny
-
+**Interactive mode:**
 ```bash
 python scripts/ask.py
 ```
 
-Pozwala zadawać wiele pytań w jednej sesji:
+Allows asking multiple questions in one session:
 ```
-💬 Pytanie: jakie decyzje podjęto w sprawie wiat śmietnikowych?
-💬 Pytanie: kto został zatrudniony w 2023 roku?
-💬 Pytanie: exit
+💬 Question: what decisions were made about waste shelters?
+💬 Question: who was hired in 2023?
+💬 Question: exit
 ```
 
-### Komendy specjalne
+**Options:**
+- `--verbose` - detailed mode (show RAG statistics)
+- `--no-sources` - run without displaying sources
+- `--stats` - system statistics
 
-- `--verbose` - tryb szczegółowy (pokaż statystyki RAG)
-- `--sources` - włącz/wyłącz wyświetlanie źródeł
-- `--stats` - statystyki systemu
-- `--no-sources` - uruchom bez wyświetlania źródeł
+### Classic Search (Retrieve Fragments)
 
-**Przykłady:**
+**Basic search:**
 ```bash
-# Pytanie z trybem szczegółowym
-python scripts/ask.py --verbose "sprawy pracownicze"
-
-# Pytanie bez wyświetlania źródeł
-python scripts/ask.py --no-sources "wiaty śmietnikowe"
+python scripts/search.py "employee matters"
 ```
 
----
-
-## 3b. Wyszukuj fragmenty (klasyczny RAG)
-
-### Tryb podstawowy
-
+**Verbose mode:**
 ```bash
-python scripts/search.py "sprawy pracownicze"
+python scripts/search.py --verbose "employee matters"
 ```
 
-### Tryb szczegółowy (--verbose)
-
-```bash
-python scripts/search.py --verbose "sprawy pracownicze"
-```
-
-**Pokazuje:**
-- Wygenerowane warianty zapytania (5 wersji)
-- Statystyki RRF fusion
+Shows:
+- Generated query variants (5 versions)
+- RRF fusion statistics
 - Cache hit rate
-- Liczba wywołań API
+- Number of API calls
 
-### Tryb interaktywny
-
+**Interactive mode:**
 ```bash
 python scripts/search.py
 ```
 
-**Dostępne komendy:**
-- `--verbose` - włącz/wyłącz tryb szczegółowy
-- `--stats` - pokaż statystyki sesji (cache, API calls)
-- `exit` / `quit` - zakończ
+**Available commands:**
+- `--verbose` - toggle detailed mode
+- `--stats` - show session statistics (cache, API calls)
+- `exit` / `quit` - exit
 
-## Przykład wyniku wyszukiwania
+### PDF to Markdown Conversion
 
-### Podstawowy output
+```bash
+# Download PDFs (optional)
+python scripts/download_pdfs.py
 
-```
-======================================================================
-RAG Search - Protokoły Zarządu MSM Energetyka
-Enhanced with Query Expansion + RRF
-======================================================================
-
-Wyniki wyszukiwania dla: "sprawy pracownicze"
-Znaleziono 5 wyników
-
-======================================================================
-1. [Protokół nr 3, Strona 1] (RRF: 0.0421)
-Źródło: Protokół nr 3 z ustaleń Zarządu w dniach  29.01. - 11.02.2025 r
-Data: 29.01. - 11.02.2025
-Znalezione przez 4 wariantów zapytania
-
-Ad 3 Zarząd na wniosek: Zespołu Nadzoru Eksploatacyjnego Koordynacji
-Remontów zaakceptował skład Komisji Przetargowej w przetargu nr 4/2025...
-======================================================================
+# Convert PDF → Markdown
+python pdf_to_markdown_easyocr.py
 ```
 
-### Verbose mode (--verbose)
+**Process:**
+1. PyMuPDF extracts pages as images
+2. EasyOCR recognizes text (Polish + English)
+3. Formats as Markdown with page headers
+4. Saves to `output/`
 
-```
-🔍 Processing query: "sprawy pracownicze"
-   Generating 5 query variants...
-   Query variants:
-      1. [original] sprawy pracownicze
-      2. [llm] zagadnienia dotyczące zatrudnienia
-      3. [llm] kwestie kadrowe
-      4. [synonym] kwestia pracownik
-      5. [word_order] pracownicze sprawy
+**OCR Accuracy:**
+- ✅ Clean print: 95-99%
+- ✅ Scanned documents: 90-95%
+- ⚠️ Handwritten: 60-80%
 
-   Searching Qdrant (10 results per variant)...
-      Variant 1: 10 results
-      Variant 2: 10 results
-      Variant 3: 10 results
-      Variant 4: 10 results
-      Variant 5: 10 results
+## How It Works
 
-   Applying Reciprocal Rank Fusion...
-      ✓ Fused to 5 final results
-      Avg variants per result: 3.2
-
-----------------------------------------------------------------------
-Szczegóły wyszukiwania:
-  Warianty zapytań: 5
-    1. [original] sprawy pracownicze
-    2. [llm] zagadnienia dotyczące zatrudnienia
-    3. [llm] kwestie kadrowe
-    4. [synonym] kwestia pracownik
-    5. [word_order] pracownicze sprawy
-
-  Statystyki fuzji (RRF):
-    Średnia wariantów na wynik: 3.2
-
-  Cache:
-    Trafienia: 12
-    Chybienia: 3
-    Współczynnik trafień: 80.0%
-    Wywołania API: 3
-----------------------------------------------------------------------
-```
-
----
-
-## Jak Działa Enhanced RAG?
-
-### Architektura Systemu
+### Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        USER QUERY                               │
-│                  "sprawy pracownicze"                           │
+│                   "employee matters"                            │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
@@ -635,53 +316,52 @@ Szczegóły wyszukiwania:
 │  │  1. Deduplicate chunks across variants                │      │
 │  │  2. Calculate RRF score for each unique chunk         │      │
 │  │  3. Sort by RRF score (descending)                    │      │
-│  │  4. Return top 5 final results                        │      │
+│  │  4. Filter by MIN_RRF_SCORE (0.04)                    │      │
+│  │  5. Return top results (typically 5-15)               │      │
 │  └──────────────────────────────────────────────────────┘      │
 └────────────────────────┬────────────────────────────────────────┘
                          │
                          ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                      FINAL RESULTS                              │
-│  • Top 5 chunks with highest RRF scores                         │
-│  • Metadata: source, page, protocol number, contributing vars   │
-│  • Display with statistics (cache, API calls, fusion)           │
+│  • Top chunks with highest RRF scores (>0.04)                   │
+│  • Metadata: source, page, protocol number                      │
+│  • Optional: LLM-generated natural language answer              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Proces Krok po Kroku
+### Step-by-Step Process
 
-#### 1. Query Expansion (5 wariantów)
+#### 1. Query Expansion (5 variants)
 
-**Cel:** Zwiększyć recall przez różne sformułowania tego samego pytania.
+**Goal:** Increase recall through different formulations of the same question.
 
-| Metoda | Przykład | Generator |
+| Method | Example | Generator |
 |--------|----------|-----------|
-| **Original** | "sprawy pracownicze" | Oryginalne zapytanie |
-| **LLM #1** | "zagadnienia dotyczące zatrudnienia" | GPT-4o-mini |
-| **LLM #2** | "kwestie kadrowe" | GPT-4o-mini |
-| **Synonym** | "kwestia pracownik" | Słownik synonimów |
-| **Word order** | "pracownicze sprawy" | Permutacja słów |
+| **Original** | "employee matters" | Original query |
+| **LLM #1** | "employment issues" | GPT-4o-mini |
+| **LLM #2** | "staffing concerns" | GPT-4o-mini |
+| **Synonym** | "worker issue" | Synonym dictionary |
+| **Word order** | "matters employee" | Word permutation |
 
-**Fallback:** Jeśli LLM zawiedzie → rule-based only + padding z oryginałem.
-
-#### 2. Embedding z Cache
+#### 2. Embedding with Cache
 
 ```python
-# Dla każdego wariantu:
+# For each variant:
 query_hash = sha256(variant_text)
 
 if cache.exists(query_hash):
     embedding = cache.get(query_hash)  # Cache HIT
 else:
     embedding = openrouter.get_embedding(variant_text)  # API call
-    cache.put(query_hash, embedding)   # Zapisz w cache
+    cache.put(query_hash, embedding)   # Store in cache
 
 # Result: 5 × 1536-dimensional vectors
 ```
 
 **Cache Benefits:**
-- 80-90% reduction w API calls (po ~50 zapytaniach)
-- Instant retrieval dla powtórzonych queries
+- 80-90% reduction in API calls (after ~50 queries)
+- Instant retrieval for repeated queries
 - SQLite - lightweight, zero setup
 
 #### 3. Vector Search (Qdrant)
@@ -702,47 +382,126 @@ for variant_embedding in variant_embeddings:
 
 **Formula:**
 ```
-RRF_score(chunk) = Σ (dla wszystkich wariantów gdzie chunk się pojawił)
+RRF_score(chunk) = Σ (for all variants where chunk appeared)
                     1 / (60 + rank)
 
-gdzie:
-- rank = pozycja chunka w wynikach tego wariantu (1-indexed)
-- 60 = stała RRF z literatury (balans precision/recall)
+where:
+- rank = chunk position in that variant's results (1-indexed)
+- 60 = RRF constant from literature (balances precision/recall)
 ```
 
-**Przykład:**
+**Example:**
 ```
-Chunk A pojawił się w:
+Chunk A appeared in:
 - Variant 1: rank 2  → 1/(60+2) = 0.0161
 - Variant 3: rank 5  → 1/(60+5) = 0.0154
 - Variant 4: rank 1  → 1/(60+1) = 0.0164
 Total RRF score = 0.0479
 
-Chunk B pojawił się w:
+Chunk B appeared in:
 - Variant 2: rank 1  → 1/(60+1) = 0.0164
 Total RRF score = 0.0164
 
-Ranking: Chunk A > Chunk B (więcej wariantów = wyższy score)
+Ranking: Chunk A > Chunk B (more variants = higher score)
 ```
 
-**Zalety RRF:**
-- Chunks pojawiające się w wielu wariantach = boost
-- Nie wymaga kalibracji score thresholds
-- Robust przeciw outlierom
+**RRF Advantages:**
+- Chunks appearing in multiple variants get boosted
+- No need to calibrate score thresholds
+- Robust against outliers
 
-#### 5. Rezultat
+#### 5. Result Filtering & Output
 
-Top 5 chunks z:
-- **RRF score** - główny ranking metric
-- **Contributing variants** - które warianty znalazły ten chunk
-- **Source metadata** - protokół, strona, data
-- **Cache stats** - hit rate, API calls
+- Filter results by `MIN_RRF_SCORE` (default: 0.04)
+- Typically returns 5-15 high-quality results
+- Includes metadata: protocol number, page, date
+- Optional: Generate natural language answer with LLM
 
----
+## Costs
 
-## Konfiguracja
+### API Costs (OpenRouter)
 
-Parametry w [rag/config.py](rag/config.py):
+**Embedding Model:** `text-embedding-3-small` - $0.00002 per 1K tokens
+**Query Expansion LLM:** `gpt-4o-mini` - $0.15/$0.60 per 1M tokens (input/output)
+**Q&A LLM:** `deepseek/deepseek-chat` (DeepSeek V3.2) - $0.27/$1.10 per 1M tokens
+
+#### One-Time Indexing
+```
+~4,500 chunks × 100 tokens/chunk = 450,000 tokens
+Cost: (450,000 / 1,000) × $0.00002 = $0.009
+
+Actual cost: $0.01-0.02
+```
+
+#### Per Query (Classic Search)
+```
+Components:
+1. Query expansion (LLM):     ~$0.000025
+2. Embeddings (5 variants):    ~$0.000002
+Total (without cache):         ~$0.000027
+
+With cache (80% hit rate):     ~$0.000025
+```
+
+#### Per Query (Q&A System)
+```
+Components:
+1. RAG search (above):         ~$0.000025
+2. DeepSeek V3.2 answer:       ~$0.000135  (500 tokens in + 500 out)
+Total:                         ~$0.000160
+
+Cost for 1000 Q&A queries: ~$0.16
+```
+
+**Model Comparison (Q&A):**
+- DeepSeek V3.2: $0.000160/query → **$0.16 per 1000 queries** ✅
+- Claude 3.5 Sonnet: $0.012/query → **$12 per 1000 queries** (75x more expensive!)
+- GPT-4o: $0.0075/query → **$7.50 per 1000 queries** (47x more expensive!)
+
+#### Monthly Costs
+
+```
+Scenario A (search only):
+  1,000 queries/month × $0.000025 = $0.025
+  Annual cost: ~$0.30
+
+Scenario B (Q&A only with DeepSeek):
+  1,000 Q&A queries/month × $0.000160 = $0.16
+  Annual cost: ~$1.92
+
+Scenario C (mixed):
+  500 search + 500 Q&A = (500 × $0.000025) + (500 × $0.000160) = $0.09
+  Annual cost: ~$1.11
+```
+
+**Conclusion:** The system is extremely cheap to maintain! 🎉 Even with DeepSeek Q&A, the cost is only ~$2/year for 1000 questions monthly!
+
+### Cache Effectiveness
+
+After ~50 queries:
+```
+Cache Hit Rate: 70-90%
+API Calls Reduction: 80-90%
+Cost Savings: ~$0.80 per 1,000 queries
+```
+
+**Cache Storage:**
+```
+~100 queries = ~1MB in SQLite
+~1,000 queries = ~10MB
+```
+
+### Performance Metrics
+
+| Metric | Cold Cache | Warm Cache |
+|---------|------------|------------|
+| **Query Time** | 1.2-1.5s | 0.8-1.0s |
+| **API Calls** | 5-6 | 1-2 |
+| **Cost** | $0.00003 | $0.000025 |
+
+## Configuration
+
+Key parameters in `rag/config.py`:
 
 ### Embeddings
 ```python
@@ -752,8 +511,8 @@ EMBEDDING_DIM = 1536
 
 ### Chunking
 ```python
-MAX_CHUNK_SIZE = 512    # Zmniejszone z 1000 dla lepszej precyzji
-CHUNK_OVERLAP = 50      # Zmniejszone z 100
+MAX_CHUNK_SIZE = 512    # Reduced from 1000 for better precision
+CHUNK_OVERLAP = 50      # Reduced from 100
 ```
 
 ### Query Expansion
@@ -768,13 +527,8 @@ NUM_RULE_VARIANTS = 2
 RRF_K = 60                  # Standard constant
 RESULTS_PER_VARIANT = 10    # Candidates per variant
 DEFAULT_TOP_K = 20          # Maximum final results
-MIN_RRF_SCORE = 0.04        # Minimum quality threshold (filters weak matches)
+MIN_RRF_SCORE = 0.04        # Minimum quality threshold
 ```
-
-**Filtrowanie jakości:**
-- System zwraca maksymalnie 20 wyników, ale tylko te z RRF score > 0.04
-- W praktyce zwraca 5-15 wyników wysokiej jakości
-- Eliminuje słabe dopasowania (score < 0.04) które mogłyby wprowadzać szum
 
 ### Cache
 ```python
@@ -782,287 +536,221 @@ ENABLE_CACHE = True
 CACHE_DB_PATH = "embedding_cache.db"
 ```
 
----
+## FAQ
 
-## Koszty i Optymalizacje
+### Can I use a different embedding model?
 
-### Koszty API (OpenRouter)
-
-**Model Embeddings:** `text-embedding-3-small` - $0.00002 per 1K tokens
-**Model LLM (Query Expansion):** `gpt-4o-mini` - $0.15/$0.60 per 1M tokens (input/output)
-**Model LLM (Q&A):** `deepseek/deepseek-chat` (DeepSeek V3.2) - $0.27/$1.10 per 1M tokens (input/output)
-
-#### Jednorazowe Przeindeksowanie
-```
-~4,500 chunks × 100 tokens/chunk = 450,000 tokens
-Cost: (450,000 / 1,000) × $0.00002 = $0.009
-
-Faktyczny koszt: $0.01-0.02
-```
-
-#### Per Query (klasyczny RAG - search.py)
-```
-Komponenty:
-1. Query expansion (LLM):     ~$0.000025
-2. Embeddings (5 variants):    ~$0.000002
-Total (bez cache):             ~$0.000027
-
-Z cache (80% hit rate):        ~$0.000025
-```
-
-#### Per Query (Q&A System - ask.py)
-```
-Komponenty:
-1. RAG search (j.w.):          ~$0.000025
-2. DeepSeek V3.2 answer:       ~$0.000135  (500 tokens in + 500 tokens out)
-Total:                         ~$0.000160
-
-Koszt 1000 pytań Q&A: ~$0.16
-```
-
-**Porównanie modeli Q&A:**
-- DeepSeek V3.2: $0.000160/query → **$0.16 per 1000 queries** ✅
-- Claude 3.5 Sonnet: $0.012/query → **$12 per 1000 queries** (75x drożej!)
-- GPT-4o: $0.0075/query → **$7.50 per 1000 queries** (47x drożej!)
-
-#### Miesięcznie
-```
-Scenariusz A (tylko search.py):
-  1,000 zapytań/miesiąc × $0.000025 = $0.025
-  Roczny koszt: ~$0.30
-
-Scenariusz B (tylko ask.py z DeepSeek):
-  1,000 pytań Q&A/miesiąc × $0.000160 = $0.16
-  Roczny koszt: ~$1.92
-
-Scenariusz C (mieszany):
-  500 search + 500 Q&A = (500 × $0.000025) + (500 × $0.000160) = $0.09
-  Roczny koszt: ~$1.11
-```
-
-**Wniosek:** System jest ekstremalnie tani w utrzymaniu! 🎉 Nawet z DeepSeek Q&A koszt to tylko ~$2/rok dla 1000 pytań miesięcznie!
-
-### Cache Effectiveness
-
-Po ~50 zapytaniach:
-```
-Cache Hit Rate: 70-90%
-API Calls Reduction: 80-90%
-Cost Savings: ~$0.80 per 1,000 queries
-```
-
-**Cache Storage:**
-```
-~100 queries = ~1MB w SQLite
-~1,000 queries = ~10MB
-```
-
-### Performance Metrics
-
-| Metryka | Cold Cache | Warm Cache |
-|---------|------------|------------|
-| **Query Time** | 1.2-1.5s | 0.8-1.0s |
-| **API Calls** | 5-6 | 1-2 |
-| **Cost** | $0.00003 | $0.000025 |
-
-**Bottlenecks:**
-- LLM query expansion: ~500-700ms (nie cacheable)
-- Embeddings: ~50ms per variant (cacheable)
-- Qdrant search: ~50ms per variant
-- RRF fusion: ~10ms
-
----
-
-## Testy
-
-### Uruchom Test Suite
-
-```bash
-python tests/test_retrieval.py
-```
-
-**Testy:**
-1. ✅ Query expansion - generowanie wariantów
-2. ✅ RRF fusion - agregacja z mock data
-3. ✅ End-to-end search - pełny flow (wymaga Qdrant)
-4. ✅ Cache hit rate - efektywność cache
-
-### Przykładowy Output
-```
-======================================================================
-Running Enhanced RAG System Tests
-======================================================================
-
-======================================================================
-Test 1: Query Expansion
-======================================================================
-
-Original: sprawy pracownicze
-  1. [original] sprawy pracownicze
-  2. [llm] zagadnienia dotyczące zatrudnienia
-  3. [llm] kwestie kadrowe
-  4. [synonym] kwestia pracownik
-  5. [word_order] pracownicze sprawy
-
-✓ Query expansion test passed
-
-======================================================================
-Test 2: RRF Fusion
-======================================================================
-
-Fused results:
-  1. doc2.md (RRF: 0.0325, variants: 2)
-  2. doc1.md (RRF: 0.0325, variants: 2)
-  3. doc3.md (RRF: 0.0246, variants: 2)
-
-✓ RRF fusion test passed
-
-======================================================================
-✓ All tests passed!
-======================================================================
-```
-
----
-
-## Monitoring i Debugging
-
-### Cache Statistics
-
-W trybie interaktywnym:
-```bash
-python scripts/search.py
-Zapytanie: --stats
-```
-
-Output:
-```
-Statystyki:
-  Przetworzone zapytania: 23
-  Wygenerowane warianty: 115
-  Cache - trafienia: 87
-  Cache - chybienia: 28
-  Cache - współczynnik: 75.7%
-```
-
-### Verbose Mode
-
-Debuguj każdy krok:
-```bash
-python scripts/search.py --verbose "test query"
-```
-
-Pokazuje:
-- Wygenerowane warianty (z metodami)
-- Wyniki per variant
-- RRF scores i contributing variants
-- Cache hit/miss dla każdego embedding
-
-### Cache Management
-
-**Sprawdź rozmiar:**
-```bash
-ls -lh embedding_cache.db
-```
-
-**Wyczyść cache:**
+Yes! Change in `rag/config.py`:
 ```python
-from rag.cache import EmbeddingCache
-cache = EmbeddingCache()
-cache.clear()
+EMBEDDING_MODEL = "openai/text-embedding-3-large"  # Larger model
+EMBEDDING_DIM = 3072
 ```
 
-**Statystyki cache:**
+**Note:** Requires reindexing the database.
+
+### Can I use a different LLM for Q&A?
+
+Yes! The Q&A system defaults to DeepSeek V3.2 (cheap and good), but you can change it:
+
+**Option 1:** Change default model in `rag/qa_system.py`:
 ```python
-stats = cache.get_stats()
-print(f"Entries: {stats['total_entries']}")
-print(f"Size: {stats['db_size_mb']} MB")
+def __init__(self, model: str = "anthropic/claude-3.5-sonnet"):  # Instead of deepseek
 ```
 
----
-
-## Troubleshooting
-
-### Problem: Rate Limiting (429 errors)
-
-**Symptom:** `Rate limited. Waiting 5s...`
-
-**Rozwiązanie:**
-1. Zwiększ `time.sleep(0.5)` → `time.sleep(1.0)` w [openrouter_client.py](rag/openrouter_client.py:96)
-2. Zmniejsz `batch_size` w [build_index.py](scripts/build_index.py:68) z 50 → 20
-
-### Problem: Cache rośnie zbyt szybko
-
-**Symptom:** `embedding_cache.db > 100MB`
-
-**Rozwiązanie:**
+**Option 2:** Specify model during initialization:
 ```python
-from rag.cache import EmbeddingCache
-cache = EmbeddingCache()
-cache.clear()  # Usuń wszystkie wpisy
+from rag.qa_system import ProtocolQASystem
+qa = ProtocolQASystem(model="anthropic/claude-3.5-sonnet")
 ```
 
-### Problem: LLM expansion failures
+**Available models on OpenRouter:**
+- `deepseek/deepseek-chat` - DeepSeek V3.2 (cheapest, good) ✅
+- `google/gemini-2.0-flash-exp:free` - Gemini 2.0 Flash (free!)
+- `anthropic/claude-3.5-sonnet` - Claude 3.5 Sonnet (best, expensive)
+- `openai/gpt-4o` - GPT-4o (very good, expensive)
+- Full list: https://openrouter.ai/models
 
-**Symptom:** `Warning: LLM expansion failed`
+### How do I adjust the quality threshold?
 
-**Rozwiązanie:**
-- Sprawdź `OPEN_ROUTER_API_KEY` w `.env`
-- Sprawdź limity API na [OpenRouter Dashboard](https://openrouter.ai/activity)
-- System automatycznie fallback na rule-based expansion
+The system filters weak results using `MIN_RRF_SCORE` (default 0.04). Change in `rag/config.py`:
 
-### Problem: Wolne queries (>3s)
-
-**Symptom:** Consistent query time > 2s
-
-**Rozwiązanie:**
-1. Zmniejsz `RESULTS_PER_VARIANT` w [config.py](rag/config.py:27) z 10 → 5
-2. Zmniejsz `NUM_LLM_VARIANTS` z 2 → 1
-3. Poczekaj na wzrost cache hit rate (po ~50 queries)
-
-### Problem: Za dużo słabych wyników
-
-**Symptom:** Wyniki z niskim RRF score (0.01-0.03), nieistotne dokumenty
-
-**Rozwiązanie:**
-Zwiększ `MIN_RRF_SCORE` w [config.py](rag/config.py:32):
 ```python
-MIN_RRF_SCORE = 0.06  # Zamiast 0.04 (bardziej restrykcyjny)
+MIN_RRF_SCORE = 0.04  # Default threshold
 ```
 
-### Problem: Za mało wyników
+**Guidelines:**
+- **0.02** - more results, may contain weak matches
+- **0.04** - balanced (recommended) ✅
+- **0.06** - only very good matches, fewer results
+- **0.10** - extremely restrictive, only perfect matches
 
-**Symptom:** System zwraca tylko 2-3 wyniki, chociaż istnieją inne istotne dokumenty
+### How often should I clear the cache?
 
-**Rozwiązanie:**
-1. Zmniejsz `MIN_RRF_SCORE` w [config.py](rag/config.py:32):
-   ```python
-   MIN_RRF_SCORE = 0.02  # Zamiast 0.04 (mniej restrykcyjny)
-   ```
-2. Zwiększ `RESULTS_PER_VARIANT`: 10 → 15 (więcej candidatów)
-3. Dostosuj `RRF_K`: 60 → 40 (większa diversity)
+Never, unless:
+- Cache > 100MB (check: `ls -lh embedding_cache.db`)
+- Changing embedding model
+- Testing cache hit rate from zero
 
-### Problem: Wyniki bardzo podobne lub powtarzające się
+### Does it work offline?
 
-**Symptom:** Top 5 results z tego samego dokumentu, brak różnorodności
+Not in the current version (requires OpenRouter API). For offline:
+1. Restore `PolishEmbedder` (local model)
+2. Disable LLM expansion (only rule-based)
+3. Reindex with local model
 
-**Rozwiązanie:**
-1. Dostosuj `RRF_K` in [config.py](rag/config.py:26): 60 → 40 (większa diversity)
-2. Rozszerz słownik synonimów w [query_expander.py](rag/query_expander.py:14-27)
+### How do I rebuild the index?
 
----
-
-## Rebuild Indeksu
-
-Jeśli dodasz nowe pliki markdown do `output/`:
+If you add new markdown files to `output/`:
 
 ```bash
 python scripts/build_index.py
 ```
 
-**UWAGA:** To usunie obecny indeks i utworzy nowy. Cache pozostanie nienaruszony.
+**NOTE:** This will delete the current index and create a new one. Cache remains intact.
+
+## Project Structure
+
+```
+energy-rag/
+├── input/                          # PDF files for conversion
+├── output/                         # Generated Markdown files
+├── rag/                           # RAG module
+│   ├── config.py                  # Configuration
+│   ├── openrouter_client.py       # OpenRouter API client
+│   ├── cache.py                   # SQLite cache for embeddings
+│   ├── openrouter_embedder.py     # Embedder with cache integration
+│   ├── query_expander.py          # Hybrid query expansion
+│   ├── rrf_aggregator.py          # Reciprocal Rank Fusion
+│   ├── enhanced_retriever.py      # Main orchestrator
+│   ├── qa_system.py               # Q&A system with LLM
+│   └── chunker.py                 # Document parsing and chunking
+├── scripts/                       # User scripts
+│   ├── build_index.py             # Indexing with cost estimation
+│   ├── search.py                  # Enhanced CLI search
+│   ├── ask.py                     # Q&A system
+│   └── download_pdfs.py           # PDF download
+├── tests/                         # Tests
+│   └── test_retrieval.py          # RAG test suite
+├── .env                           # API keys (not in git)
+├── embedding_cache.db             # SQLite cache (auto-generated)
+├── requirements.txt               # Python dependencies
+└── README.md                      # Documentation
+```
+
+## Troubleshooting
+
+### Rate Limiting (429 errors)
+
+**Symptom:** `Rate limited. Waiting 5s...`
+
+**Solution:**
+1. Increase `time.sleep(0.5)` → `time.sleep(1.0)` in `rag/openrouter_client.py`
+2. Reduce `batch_size` in `scripts/build_index.py` from 50 → 20
+
+### Cache growing too fast
+
+**Symptom:** `embedding_cache.db > 100MB`
+
+**Solution:**
+```python
+from rag.cache import EmbeddingCache
+cache = EmbeddingCache()
+cache.clear()  # Remove all entries
+```
+
+### LLM expansion failures
+
+**Symptom:** `Warning: LLM expansion failed`
+
+**Solution:**
+- Check `OPEN_ROUTER_API_KEY` in `.env`
+- Check API limits at [OpenRouter Dashboard](https://openrouter.ai/activity)
+- System automatically falls back to rule-based expansion
+
+### Slow queries (>3s)
+
+**Symptom:** Consistent query time > 2s
+
+**Solution:**
+1. Reduce `RESULTS_PER_VARIANT` in `config.py` from 10 → 5
+2. Reduce `NUM_LLM_VARIANTS` from 2 → 1
+3. Wait for cache hit rate to increase (after ~50 queries)
+
+### Too many weak results
+
+**Symptom:** Results with low RRF scores (0.01-0.03), irrelevant documents
+
+**Solution:**
+Increase `MIN_RRF_SCORE` in `config.py`:
+```python
+MIN_RRF_SCORE = 0.06  # Instead of 0.04 (more restrictive)
+```
+
+### Too few results
+
+**Symptom:** System returns only 2-3 results, even though other relevant documents exist
+
+**Solution:**
+1. Decrease `MIN_RRF_SCORE` in `config.py`:
+   ```python
+   MIN_RRF_SCORE = 0.02  # Instead of 0.04 (less restrictive)
+   ```
+2. Increase `RESULTS_PER_VARIANT`: 10 → 15 (more candidates)
+
+## Testing
+
+### Run Test Suite
+
+```bash
+python tests/test_retrieval.py
+```
+
+**Tests:**
+1. ✅ Query expansion - variant generation
+2. ✅ RRF fusion - aggregation with mock data
+3. ✅ End-to-end search - full flow (requires Qdrant)
+4. ✅ Cache hit rate - cache effectiveness
+
+## Roadmap
+
+### Planned Features
+
+- [ ] **Semantic Reranking** - 2-stage retrieval with cross-encoder
+- [ ] **Query Classification** - filtering by protocol type
+- [ ] **Highlight Variants** - showing which words from variants matched
+- [ ] **A/B Testing** - comparison with previous system
+- [ ] **Streaming Results** - progressive display for long results
+- [ ] **Multi-language Support** - extension to other languages
+- [ ] **Web UI** - graphical interface (Streamlit/Gradio)
+
+### Possible Optimizations
+
+- [ ] **Hybrid Search** - combination of vector + keyword (BM25)
+- [ ] **Result Caching** - cache entire results (not just embeddings)
+- [ ] **Batch Querying** - handle multiple queries simultaneously
+- [ ] **Custom Synonyms** - learning from query logs
+- [ ] **Feedback Loop** - implicit relevance feedback
+
+## Contributing
+
+Report bugs and feature requests through GitHub Issues.
+
+Pull requests are welcome! 🎉
+
+## License
+
+Open source - use freely!
+
+## Acknowledgments
+
+Technologies used in this project:
+- **OpenRouter** - unified LLM & embeddings API
+- **Qdrant** - vector database
+- **EasyOCR** - optical character recognition
+- **PyMuPDF** - PDF processing
+- **DeepSeek** - affordable high-quality LLM
+- **Anthropic Claude** - code generation & planning
 
 ---
 
-## Licencja
-
-Open source - wykorzystuj dowolnie!
+**Built with ❤️ for better document search**

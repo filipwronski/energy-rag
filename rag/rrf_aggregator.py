@@ -31,7 +31,7 @@ class RRFAggregator:
         """
         return f"{result['source_file']}:{result['page']}:{result['chunk_index']}"
 
-    def fuse(self, result_sets: List[List[Dict]], top_k: int = 5) -> List[Dict]:
+    def fuse(self, result_sets: List[List[Dict]], top_k: int = 5, min_score: float = 0.0) -> List[Dict]:
         """
         Fuse multiple result sets using Reciprocal Rank Fusion
 
@@ -40,10 +40,11 @@ class RRFAggregator:
 
         Args:
             result_sets: List of result lists from different query variants
-            top_k: Number of final results to return
+            top_k: Maximum number of final results to return
+            min_score: Minimum RRF score threshold (filters weak results)
 
         Returns:
-            Fused and deduplicated results sorted by RRF score
+            Fused and deduplicated results sorted by RRF score (filtered by min_score)
         """
         # Track RRF scores and metadata
         rrf_scores = defaultdict(float)
@@ -77,8 +78,17 @@ class RRFAggregator:
         )
 
         # Build final results with enriched metadata
+        # Filter by min_score and limit to top_k
         final_results = []
-        for chunk_id, rrf_score in sorted_chunks[:top_k]:
+        for chunk_id, rrf_score in sorted_chunks:
+            # Stop if we have enough results
+            if len(final_results) >= top_k:
+                break
+
+            # Skip results below threshold
+            if rrf_score < min_score:
+                continue
+
             result = chunk_data[chunk_id].copy()
             result["rrf_score"] = rrf_score
             result["contributing_variants"] = chunk_sources[chunk_id]

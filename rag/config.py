@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Qdrant settings
-QDRANT_URL = "http://localhost:6333"
+QDRANT_URL = os.getenv("QDRANT_URL", "http://localhost:6333")
 COLLECTION_NAME = "energy_protocols"
 
 # Embedding settings (migrated to OpenRouter)
@@ -27,12 +27,13 @@ RRF_K = 60              # Standard RRF constant from literature
 RESULTS_PER_VARIANT = 10  # Results to fetch per query variant before fusion
 
 # Search parameters
-DEFAULT_TOP_K = 20  # Final results after RRF fusion
-MIN_SCORE_THRESHOLD = 0.5  # Filter low-confidence results
+DEFAULT_TOP_K = 20  # Maximum final results after RRF fusion
+MIN_SCORE_THRESHOLD = 0.5  # Filter low-confidence results (for vector similarity)
+MIN_RRF_SCORE = 0.04  # Minimum RRF score to include result (filters weak matches)
 
 # Cache settings
 ENABLE_CACHE = True
-CACHE_DB_PATH = "embedding_cache.db"
+CACHE_DB_PATH = os.getenv("CACHE_DB_PATH", "embedding_cache.db")
 
 # OpenRouter API
 OPEN_ROUTER_API_KEY = os.getenv("OPEN_ROUTER_API_KEY")

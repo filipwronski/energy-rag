@@ -17,8 +17,8 @@ def format_source(source, index):
         source: Source document dictionary
         index: Source index (1-based)
     """
-    print(f"  {index}. Protokół nr {source['protocol_number']}, "
-          f"Strona {source['page']} (Data: {source['date_range']})")
+    print(f"  {index}. Protocol No. {source['protocol_number']}, "
+          f"Page {source['page']} (Date: {source['date_range']})")
     print(f"     RRF Score: {source['rrf_score']:.4f}")
     print(f"     {source['source']}")
 
@@ -26,7 +26,7 @@ def format_source(source, index):
 def print_header():
     """Print application header"""
     print("\n" + "=" * 70)
-    print("Q&A System - Protokoły Zarządu MSM Energetyka")
+    print("Q&A System - MSM Energetyka Board Protocols")
     print("Powered by RAG + DeepSeek V3.2")
     print("=" * 70)
 
@@ -43,28 +43,28 @@ def single_question_mode(question, qa_system, top_k=20, verbose=False, show_sour
         show_sources: Show source documents
     """
     print_header()
-    print(f"\nPytanie: {question}\n")
+    print(f"\nQuestion: {question}\n")
 
     response = qa_system.ask(question, top_k=top_k, verbose=verbose)
 
     print("=" * 70)
-    print("ODPOWIEDŹ:")
+    print("ANSWER:")
     print("=" * 70)
     print(response["answer"])
     print("=" * 70)
 
     if show_sources and response["sources"]:
-        print(f"\n📚 Źródła ({len(response['sources'])} dokumentów):")
+        print(f"\n📚 Sources ({len(response['sources'])} documents):")
         for idx, source in enumerate(response["sources"], 1):
             format_source(source, idx)
 
     if verbose:
         print("\n" + "-" * 70)
-        print("Statystyki wyszukiwania:")
+        print("Search statistics:")
         metadata = response["search_metadata"]
-        print(f"  Warianty zapytań: {len(metadata['variants'])}")
-        print(f"  Cache - trafienia: {metadata['cache_stats']['cache_hits']}")
-        print(f"  Cache - chybienia: {metadata['cache_stats']['cache_misses']}")
+        print(f"  Query variants: {len(metadata['variants'])}")
+        print(f"  Cache - hits: {metadata['cache_stats']['cache_hits']}")
+        print(f"  Cache - misses: {metadata['cache_stats']['cache_misses']}")
         print("-" * 70)
 
 
@@ -79,45 +79,45 @@ def interactive_mode(qa_system, top_k=20, verbose=False, show_sources=True):
         show_sources: Show source documents
     """
     print_header()
-    print("\nTryb interaktywny - zadaj pytanie lub wpisz 'exit' aby zakończyć")
-    print("\nKomendy specjalne:")
-    print("  --verbose      - włącz/wyłącz tryb szczegółowy")
-    print("  --sources      - włącz/wyłącz wyświetlanie źródeł")
-    print("  --stats        - pokaż statystyki systemu")
-    print("  exit/quit      - zakończ")
-    print("\nPrzykładowe pytania:")
-    print("  - Jakie remonty były przeprowadzane przy ul. Bonifacego 66?")
-    print("  - Jakie decyzje podjęto w sprawie wiat śmietnikowych?")
-    print("  - Kto został zatrudniony w 2023 roku?")
-    print("  - Jakie były wydatki na remonty w 2024 roku?")
+    print("\nInteractive mode - ask a question or type 'exit' to quit")
+    print("\nSpecial commands:")
+    print("  --verbose      - toggle verbose mode")
+    print("  --sources      - toggle source display")
+    print("  --stats        - show system statistics")
+    print("  exit/quit      - exit")
+    print("\nExample questions:")
+    print("  - What renovations were carried out at ul. Bonifacego 66?")
+    print("  - What decisions were made regarding waste shelters?")
+    print("  - Who was hired in 2023?")
+    print("  - What were the renovation expenses in 2024?")
     print()
 
     while True:
         try:
-            question = input("\n💬 Pytanie: ").strip()
+            question = input("\n💬 Question: ").strip()
 
-            if question.lower() in ['exit', 'quit', 'q', 'wyjście', 'koniec']:
-                print("\nDo widzenia!")
+            if question.lower() in ['exit', 'quit', 'q']:
+                print("\nGoodbye!")
                 break
 
             if question == "--verbose":
                 verbose = not verbose
-                print(f"✓ Tryb szczegółowy: {'włączony' if verbose else 'wyłączony'}")
+                print(f"✓ Verbose mode: {'enabled' if verbose else 'disabled'}")
                 continue
 
             if question == "--sources":
                 show_sources = not show_sources
-                print(f"✓ Wyświetlanie źródeł: {'włączone' if show_sources else 'wyłączone'}")
+                print(f"✓ Source display: {'enabled' if show_sources else 'disabled'}")
                 continue
 
             if question == "--stats":
                 stats = qa_system.get_stats()
-                print("\n📊 Statystyki systemu:")
-                print(f"  Przetworzone zapytania: {stats['queries_processed']}")
-                print(f"  Wygenerowane warianty: {stats['total_variants_generated']}")
-                print(f"  Cache - trafienia: {stats['embedder_stats']['cache_hits']}")
-                print(f"  Cache - chybienia: {stats['embedder_stats']['cache_misses']}")
-                print(f"  Cache - współczynnik: {stats['embedder_stats']['cache_hit_rate']}")
+                print("\n📊 System statistics:")
+                print(f"  Processed queries: {stats['queries_processed']}")
+                print(f"  Generated variants: {stats['total_variants_generated']}")
+                print(f"  Cache - hits: {stats['embedder_stats']['cache_hits']}")
+                print(f"  Cache - misses: {stats['embedder_stats']['cache_misses']}")
+                print(f"  Cache - hit rate: {stats['embedder_stats']['cache_hit_rate']}")
                 continue
 
             if not question:
@@ -126,23 +126,23 @@ def interactive_mode(qa_system, top_k=20, verbose=False, show_sources=True):
             response = qa_system.ask(question, top_k=top_k, verbose=verbose)
 
             print("\n" + "=" * 70)
-            print("ODPOWIEDŹ:")
+            print("ANSWER:")
             print("=" * 70)
             print(response["answer"])
             print("=" * 70)
 
             if show_sources and response["sources"]:
-                print(f"\n📚 Źródła ({len(response['sources'])} dokumentów):")
+                print(f"\n📚 Sources ({len(response['sources'])} documents):")
                 for idx, source in enumerate(response["sources"][:10], 1):  # Show top 10
                     format_source(source, idx)
                 if len(response["sources"]) > 10:
-                    print(f"  ... i {len(response['sources']) - 10} więcej")
+                    print(f"  ... and {len(response['sources']) - 10} more")
 
         except KeyboardInterrupt:
-            print("\n\nDo widzenia!")
+            print("\n\nGoodbye!")
             break
         except Exception as e:
-            print(f"\n❌ Błąd: {e}")
+            print(f"\n❌ Error: {e}")
             import traceback
             if verbose:
                 traceback.print_exc()
@@ -161,9 +161,9 @@ def main():
             sys.argv.remove("--no-sources")
 
         # Initialize QA system
-        print("Inicjalizacja systemu Q&A...")
+        print("Initializing Q&A system...")
         qa_system = ProtocolQASystem()
-        print("✓ Gotowe!\n")
+        print("✓ Ready!\n")
 
         if len(sys.argv) > 1:
             # Single question mode
@@ -183,11 +183,11 @@ def main():
             )
 
     except Exception as e:
-        print(f"\n❌ Błąd: {e}")
-        print("\nUpewnij się, że:")
-        print("1. Qdrant działa (docker run -p 6333:6333 qdrant/qdrant)")
-        print("2. Indeks został zbudowany (python scripts/build_index.py)")
-        print("3. Plik .env zawiera OPEN_ROUTER_API_KEY")
+        print(f"\n❌ Error: {e}")
+        print("\nMake sure that:")
+        print("1. Qdrant is running (docker run -p 6333:6333 qdrant/qdrant)")
+        print("2. Index has been built (python scripts/build_index.py)")
+        print("3. .env file contains OPEN_ROUTER_API_KEY")
         import traceback
         traceback.print_exc()
         sys.exit(1)
