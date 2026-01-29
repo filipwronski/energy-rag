@@ -3,7 +3,9 @@
 import re
 from pathlib import Path
 from typing import List, Dict
-from .config import MAX_CHUNK_SIZE, CHUNK_OVERLAP, OUTPUT_DIR
+from .config import MAX_CHUNK_SIZE, CHUNK_OVERLAP, OUTPUT_DIR, USE_SEMANTIC_CHUNKING, ENABLE_CONTEXT_ENRICHMENT
+from .semantic_chunker import SemanticChunker
+from .context_enricher import ContextEnricher
 
 
 def extract_h1_title(content: str) -> str:
@@ -134,6 +136,9 @@ def chunk_document(filepath: Path) -> List[Dict]:
     all_chunks = []
     chunk_index = 0
 
+    # Initialize semantic chunker if enabled
+    semantic_chunker = SemanticChunker() if USE_SEMANTIC_CHUNKING else None
+
     for page_num, page_content in pages:
         # Skip pages with no recognized text
         if "*[Brak rozpoznanego tekstu]*" in page_content:
@@ -145,25 +150,54 @@ def chunk_document(filepath: Path) -> List[Dict]:
         if len(text_without_header.strip()) < 50:
             continue
 
-        # Split if page is too long
-        sections = chunk_long_section(page_content, MAX_CHUNK_SIZE, CHUNK_OVERLAP)
+        # Use semantic chunking or fallback to old method
+        if USE_SEMANTIC_CHUNKING and semantic_chunker:
+            semantic_sections = semantic_chunker.chunk_page(page_content, page_num)
 
-        for section in sections:
-            chunk = {
-                "text": section,
-                "source_file": filepath.name,
-                "source_title": source_title,
-                "page_number": page_num,
-                "chunk_index": chunk_index,
-                "protocol_number": protocol_number,
-                "date_range": date_range
-            }
-            all_chunks.append(chunk)
-            chunk_index += 1
+            for section in semantic_sections:
+                chunk = {
+                    "text": section['text'],
+                    "source_file": filepath.name,
+                    "source_title": source_title,
+                    "page_number": page_num,
+                    "chunk_index": chunk_index,
+                    "protocol_number": protocol_number,
+                    "date_range": date_range,
+                    "section_header": section.get('header', ''),
+                    "chunk_type": section.get('type', 'unknown')
+                }
+                all_chunks.append(chunk)
+                chunk_index += 1
+        else:
+            # Fallback to old chunking method
+            sections = chunk_long_section(page_content, MAX_CHUNK_SIZE, CHUNK_OVERLAP)
+
+            for section in sections:
+                chunk = {
+                    "text": section,
+                    "source_file": filepath.name,
+                    "source_title": source_title,
+                    "page_number": page_num,
+                    "chunk_index": chunk_index,
+                    "protocol_number": protocol_number,
+                    "date_range": date_range
+                }
+                all_chunks.append(chunk)
+                chunk_index += 1
 
     # Add total_chunks to all chunks
     for chunk in all_chunks:
         chunk["total_chunks"] = len(all_chunks)
+
+    # Apply contextual enrichment if enabled
+    if ENABLE_CONTEXT_ENRICHMENT and all_chunks:
+        enricher = ContextEnricher()
+        doc_context = {
+            'source_title': source_title,
+            'protocol_number': protocol_number,
+            'date_range': date_range
+        }
+        all_chunks = enricher.enrich_chunks(all_chunks, doc_context)
 
     return all_chunks
 

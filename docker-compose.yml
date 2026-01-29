@@ -25,10 +25,12 @@ services:
     volumes:
       - ./input:/app/input
       - ./output:/app/output
-
-      - ./embedding_cache.db:/app/data/embedding_cache.db
-
+      - ./embedding_cache.db:/app/embedding_cache.db
+      - ./bm25_index.pkl:/app/bm25_index.pkl
       - ./.env:/app/.env:ro
+      # Mount code for development (no rebuild needed for code changes)
+      - ./rag:/app/rag:ro
+      - ./scripts:/app/scripts:ro
     environment:
       - QDRANT_URL=http://qdrant:6333
       - CACHE_DB_PATH=/app/data/embedding_cache.db

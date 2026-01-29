@@ -40,3 +40,25 @@ OPEN_ROUTER_API_KEY = os.getenv("OPEN_ROUTER_API_KEY")
 
 # Paths
 OUTPUT_DIR = "output"
+
+# === RAG IMPROVEMENTS CONFIGURATION ===
+
+# Query expansion enhancements (#4)
+USE_LEMMATIZATION = True
+USE_ABBREVIATION_EXPANSION = True
+USE_ENTITY_EXTRACTION = False  # Optional, can be enabled for debugging
+
+# Semantic chunking (#1)
+USE_SEMANTIC_CHUNKING = True
+MIN_CHUNK_SIZE = 200
+
+# Contextual enrichment (#5)
+ENABLE_CONTEXT_ENRICHMENT = True
+KEYWORDS_TOP_K = 5
+SUMMARY_MAX_LENGTH = 100
+
+# Cross-encoder reranking (#3)
+ENABLE_RERANKING = True
+RERANKER_MODEL = "BAAI/bge-reranker-v2-m3"
+RERANKER_DEVICE = "cpu"  # or "cuda" if GPU available
+RERANKING_CANDIDATES = 50

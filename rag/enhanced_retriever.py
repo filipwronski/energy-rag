@@ -1,16 +1,18 @@
 """Enhanced retriever with query expansion and RRF aggregation"""
 
-from typing import List, Dict
+from typing import List, Dict, Optional
 from qdrant_client import QdrantClient
 from .openrouter_embedder import OpenRouterEmbedder
 from .openrouter_client import OpenRouterClient
 from .query_expander import QueryExpander
 from .rrf_aggregator import RRFAggregator
+from .reranker import CrossEncoderReranker
 from .config import (
     QDRANT_URL, COLLECTION_NAME,
     NUM_QUERY_VARIANTS, RESULTS_PER_VARIANT,
     DEFAULT_TOP_K, RRF_K, MIN_RRF_SCORE,
-    ENABLE_CACHE, CACHE_DB_PATH
+    ENABLE_CACHE, CACHE_DB_PATH,
+    ENABLE_RERANKING, RERANKING_CANDIDATES
 )
 
 
@@ -26,6 +28,15 @@ class EnhancedProtocolRetriever:
         self.openrouter_client = OpenRouterClient()
         self.query_expander = QueryExpander(self.openrouter_client)
         self.rrf_aggregator = RRFAggregator(k=RRF_K)
+
+        # Initialize reranker if enabled
+        self.reranker: Optional[CrossEncoderReranker] = None
+        if ENABLE_RERANKING:
+            try:
+                self.reranker = CrossEncoderReranker()
+            except Exception as e:
+                print(f"Warning: Failed to initialize reranker: {e}")
+                print("Reranking will be disabled.")
 
         self.stats = {
             "queries_processed": 0,
@@ -98,6 +109,15 @@ class EnhancedProtocolRetriever:
                 "cache_stats": {...}  # Embedding cache statistics
             }
         """
+        return self._dense_search(query, top_k, num_variants, results_per_variant, min_rrf_score, verbose)
+
+    def _dense_search(self, query: str,
+                     top_k: int,
+                     num_variants: int,
+                     results_per_variant: int,
+                     min_rrf_score: float,
+                     verbose: bool) -> Dict:
+        """Dense vector search with query expansion and reranking"""
         if verbose:
             print(f"\n🔍 Processing query: \"{query}\"")
             print(f"   Generating {num_variants} query variants...")
@@ -134,11 +154,23 @@ class EnhancedProtocolRetriever:
             fusion_stats = self.rrf_aggregator.get_fusion_stats(fused_results)
             print(f"      Avg variants per result: {fusion_stats['avg_variants_per_result']}")
 
-        # 4. Update stats
+        # 4. Apply reranking if enabled
+        if ENABLE_RERANKING and self.reranker and fused_results:
+            if verbose:
+                print(f"\n   Applying cross-encoder reranking...")
+
+            # Get more candidates for reranking
+            candidates = fused_results[:RERANKING_CANDIDATES]
+            fused_results = self.reranker.rerank(query, candidates, top_k=top_k)
+
+            if verbose:
+                print(f"      ✓ Reranked to top {len(fused_results)} results")
+
+        # 5. Update stats
         self.stats["queries_processed"] += 1
         self.stats["total_variants_generated"] += len(variants)
 
-        # 5. Return results with metadata
+        # 6. Return results with metadata
         return {
             "results": fused_results,
             "query": query,

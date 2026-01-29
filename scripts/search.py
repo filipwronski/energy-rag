@@ -11,22 +11,51 @@ from rag.enhanced_retriever import EnhancedProtocolRetriever
 
 def format_result(result, index):
     """
-    Format a single search result
+    Format a single search result with enhanced context
 
     Args:
         result: Result dictionary
         index: Result index (1-based)
     """
     print(f"\n{'=' * 70}")
-    print(f"{index}. [Protocol No. {result['protocol_number']}, Page {result['page']}] "
-          f"(RRF: {result['rrf_score']:.4f})")
-    print(f"Source: {result['source']}")
-    print(f"Date: {result['date_range']}")
+
+    # Format header with context
+    header_parts = []
+    if result.get('protocol_number'):
+        header_parts.append(f"Protokół {result['protocol_number']}")
+    if result.get('section_header'):
+        header_parts.append(result['section_header'])
+    if result.get('page'):
+        header_parts.append(f"Strona {result['page']}")
+
+    header = f"{index}. [" + ", ".join(header_parts) + "]" if header_parts else f"{index}."
+
+    # Add scores
+    scores = []
+    if 'rrf_score' in result:
+        scores.append(f"RRF: {result['rrf_score']:.4f}")
+    if 'ce_score' in result:
+        scores.append(f"Relevance: {result['ce_score']:.4f}")
+
+    if scores:
+        header += f" (" + ", ".join(scores) + ")"
+
+    print(header)
+
+    # Show source info
+    print(f"Źródło: {result.get('source', 'N/A')}")
+    if result.get('date_range'):
+        print(f"Data: {result['date_range']}")
+
+    # Show keywords if available
+    if result.get('keywords'):
+        print(f"Słowa kluczowe: {', '.join(result['keywords'][:5])}")
 
     # Show contributing variants
     if "contributing_variants" in result:
-        print(f"Found by {result['num_variants']} query variants")
+        print(f"Znalezione przez {result['num_variants']} wariantów zapytania")
 
+    # Show text
     print(f"\n{result['text'][:800]}")  # Show first 800 chars
     if len(result['text']) > 800:
         print("...")
@@ -70,7 +99,11 @@ def print_header():
     """Print application header"""
     print("\n" + "=" * 70)
     print("RAG Search - MSM Energetyka Board Protocols")
-    print("Enhanced with Query Expansion + RRF")
+    print("Enhanced with:")
+    print("  • Query Expansion (synonyms, abbreviations, LLM)")
+    print("  • Dense Vector Search (embeddings)")
+    print("  • Cross-encoder Reranking")
+    print("  • Contextual Enrichment")
     print("=" * 70)
 
 
