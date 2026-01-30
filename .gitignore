@@ -41,12 +41,14 @@ embedding_cache.db
 scripts/embedding_cache.db
 
 # Input PDF files - can be re-downloaded
-input/
-input-sp/
+# Keep folder but ignore its content
+input/*
+!input/.gitkeep
 
 # Generated output files - can be regenerated from PDFs
-output/
-output-sp/
+# Keep folder but ignore its content
+output/*
+!output/.gitkeep
 
 # Additional cache and temporary files
 *.log

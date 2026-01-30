@@ -13,9 +13,9 @@ COLLECTION_NAME = "energy_protocols"
 EMBEDDING_MODEL = "openai/text-embedding-3-small"
 EMBEDDING_DIM = 1536  # Updated from 768 to 1536
 
-# Chunking parameters (optimized for better precision)
-MAX_CHUNK_SIZE = 512  # Updated from 1000 to 512 characters
-CHUNK_OVERLAP = 50    # Updated from 100 to 50 characters
+# Chunking parameters (optimized for cost efficiency)
+MAX_CHUNK_SIZE = 1024  # Maximum chunk size in characters (2x increase)
+CHUNK_OVERLAP = 100    # Overlap between chunks in characters (2x increase for better context continuity)
 
 # Query expansion settings
 NUM_QUERY_VARIANTS = 5  # Total number of query variants to generate
@@ -50,7 +50,7 @@ USE_ENTITY_EXTRACTION = False  # Optional, can be enabled for debugging
 
 # Semantic chunking (#1)
 USE_SEMANTIC_CHUNKING = True
-MIN_CHUNK_SIZE = 200
+MIN_CHUNK_SIZE = 450  # Minimum semantic chunk size (more aggressive merging of small sections)
 
 # Contextual enrichment (#5)
 ENABLE_CONTEXT_ENRICHMENT = True

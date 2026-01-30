@@ -139,6 +139,8 @@ OPEN_ROUTER_API_KEY=sk-or-v1-your_actual_key_here
 
 ### 3. Prepare Input Files
 
+The repository includes empty `input/` and `output/` folders ready for your files.
+
 #### Option A: Download PDFs (if available)
 
 ```bash
@@ -147,11 +149,9 @@ python scripts/download_pdfs.py
 
 #### Option B: Add Your Own PDFs
 
-Place PDF files in directories:
-- `input/` - main protocols
-- `input-sp/` - estate protocols (optional)
+Place PDF files in the `input/` directory (folder already exists in the repository).
 
-**Note:** Directories `input/`, `input-sp/`, `output/` and `output-sp/` are git-ignored. You must generate them locally.
+**Note:** The folders `input/` and `output/` are tracked in git (empty), but their content (PDF and Markdown files) is automatically ignored. This means you don't need to manually create these directories after cloning the repo.
 
 ### 4. Build Index
 
