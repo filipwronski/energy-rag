@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Script for downloading PDF files from files.json
+Script for downloading PDF files from CSV file with URLs
 """
 
-import json
+import csv
 import os
 import urllib.request
 import urllib.parse
@@ -12,12 +12,13 @@ import unicodedata
 import re
 
 
-def sanitize_filename(filename: str) -> str:
+def sanitize_filename(filename: str, max_length: int = 200) -> str:
     """
     Creates a safe filename by removing/replacing problematic characters.
 
     Args:
         filename: Original filename
+        max_length: Maximum length for the filename (default: 200)
 
     Returns:
         Safe filename
@@ -38,20 +39,48 @@ def sanitize_filename(filename: str) -> str:
     # Remove underscores at the beginning and end
     safe_string = safe_string.strip('_')
 
+    # Truncate if too long
+    if len(safe_string) > max_length:
+        safe_string = safe_string[:max_length].rstrip('_')
+
     return safe_string
 
 
-def download_pdfs(json_file: str = "input/files.json", output_dir: str = "input"):
+def extract_filename_from_url(url: str) -> str:
     """
-    Downloads all PDF files from the array in the JSON file.
+    Extracts filename from URL path.
 
     Args:
-        json_file: Path to the JSON file with data
+        url: The URL to extract filename from
+
+    Returns:
+        Filename without extension, or empty string if not found
+    """
+    try:
+        parsed = urllib.parse.urlparse(url)
+        path = parsed.path
+        # Get the last part of the path
+        filename = os.path.basename(path)
+        # Remove .pdf extension if present
+        if filename.lower().endswith('.pdf'):
+            filename = filename[:-4]
+        return filename
+    except Exception:
+        return ""
+
+
+def download_pdfs(csv_file: str = "input/urls.csv", output_dir: str = "input"):
+    """
+    Downloads all PDF files from CSV file with URLs.
+
+    Args:
+        csv_file: Path to the CSV file with URLs (columns: url, filename)
         output_dir: Target directory for downloaded files
     """
-    # Load JSON file
-    with open(json_file, 'r', encoding='utf-8') as f:
-        data = json.load(f)
+    # Read CSV file
+    with open(csv_file, 'r', encoding='utf-8') as f:
+        reader = csv.DictReader(f)
+        data = list(reader)
 
     # Ensure the target directory exists
     Path(output_dir).mkdir(parents=True, exist_ok=True)
@@ -61,32 +90,40 @@ def download_pdfs(json_file: str = "input/files.json", output_dir: str = "input"
     downloaded = 0
     errors = 0
 
-    print(f"Found {total} entries in JSON file")
+    print(f"Found {total} entries in CSV file")
     print(f"Target directory: {output_dir}\n")
 
     for idx, item in enumerate(data, 1):
-        file_url = item.get('file', '')
-        filename = item.get('filename', f'file_{idx}')
-        filedesc = item.get('filedesc', '')
+        file_url = item.get('url', '').strip()
+        custom_filename = item.get('filename', '').strip()
 
         if not file_url:
             print(f"[{idx}/{total}] Skipped - no URL")
             continue
 
-        # Create filename from filename and filedesc
-        if filedesc:
-            combined_name = f"{filename} - {filedesc}"
-        else:
-            combined_name = filename
+        # Extract original filename from URL
+        url_filename = extract_filename_from_url(file_url)
+        if not url_filename:
+            url_filename = f'file_{idx}'
 
-        # Sanitize filename
-        safe_filename = sanitize_filename(combined_name)
+        # Limit URL filename to 50 characters
+        if len(url_filename) > 50:
+            url_filename = url_filename[:50]
+
+        # Combine URL filename with custom filename
+        if custom_filename:
+            combined_filename = f"{url_filename} - {custom_filename}"
+        else:
+            combined_filename = url_filename
+
+        # Sanitize filename (max 200 chars total)
+        safe_filename = sanitize_filename(combined_filename)
         local_filename = f"{safe_filename}.pdf"
 
         local_path = os.path.join(output_dir, local_filename)
 
         try:
-            print(f"[{idx}/{total}] Downloading: {filename}")
+            print(f"[{idx}/{total}] Downloading: {custom_filename if custom_filename else url_filename}")
             print(f"  URL: {file_url}")
             print(f"  Saving as: {local_filename}")
 

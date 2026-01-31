@@ -147,11 +147,37 @@ OPEN_ROUTER_API_KEY=sk-or-v1-your_actual_key_here
 
 The repository includes empty `input/` and `output/` folders ready for your files.
 
-#### Option A: Download PDFs (if available)
+#### Option A: Download PDFs from URLs
 
-```bash
-python scripts/download_pdfs.py
-```
+1. Create your URLs file from the example:
+   ```bash
+   cp input/urls.example.csv input/urls.csv
+   ```
+
+2. Edit `input/urls.csv` and add your PDF URLs:
+   ```csv
+   url,filename
+   https://example.com/document1.pdf,My Custom Document Name
+   https://example.com/reports/annual-report.pdf,
+   https://example.com/policy.pdf,Energy Policy Guidelines
+   ```
+
+   **CSV Format:**
+   - Column 1 (`url`): Required - PDF file URL
+   - Column 2 (`filename`): Optional - Custom filename (without .pdf extension)
+     - If provided: Uses custom name
+     - If empty: Extracts filename from URL
+     - Final filename format: `[url_filename (50 chars)] - [custom_filename]`
+
+3. Download PDFs:
+   ```bash
+   python scripts/download_pdfs.py
+   ```
+
+**Notes:**
+- Filenames are automatically sanitized (special characters removed)
+- Maximum filename length: 200 characters
+- Files are saved to `input/` directory
 
 #### Option B: Add Your Own PDFs
 

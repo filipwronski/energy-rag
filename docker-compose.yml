@@ -20,6 +20,7 @@ services:
         USER_ID: ${USER_ID:-1000}
         GROUP_ID: ${GROUP_ID:-1000}
     container_name: energy-rag-app
+    user: "${USER_ID:-1000}:${GROUP_ID:-1000}"
     depends_on:
       - qdrant
     volumes:
@@ -34,6 +35,8 @@ services:
     environment:
       - QDRANT_URL=http://qdrant:6333
       - CACHE_DB_PATH=/app/data/embedding_cache.db
+      - TORCHINDUCTOR_CACHE_DIR=/tmp/torch_cache
+      - HOME=/tmp
     networks:
       - energy-rag-network
     stdin_open: true

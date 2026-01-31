@@ -44,6 +44,11 @@ scripts/embedding_cache.db
 # Keep folder but ignore its content
 input/*
 !input/.gitkeep
+!input/urls.example.csv
+!input/*.example.csv
+
+# Ignore actual URLs file (may contain private links)
+input/urls.csv
 
 # Generated output files - can be regenerated from PDFs
 # Keep folder but ignore its content
