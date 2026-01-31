@@ -75,7 +75,13 @@ nano .env
 
 Get your API key at [OpenRouter](https://openrouter.ai/keys)
 
-### 3. Build Index
+### 3. Prepare Your Documents
+
+Place your PDF files in the `input/` directory. The system will convert them to Markdown and store the results in the `output/` directory.
+
+**Note:** Both `input/` and `output/` folders are tracked in git (empty), but their content (PDF and Markdown files) is automatically ignored.
+
+### 4. Build Index
 
 ```bash
 # If you have PDFs: Convert to Markdown first
@@ -87,7 +93,7 @@ python scripts/build_index.py
 
 **One-time cost**: ~$0.01-0.02 for ~4,500 chunks
 
-### 4. Ask Questions
+### 5. Ask Questions
 
 **Q&A System (natural language answers):**
 ```bash
